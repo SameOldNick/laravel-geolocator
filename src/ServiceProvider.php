@@ -2,9 +2,9 @@
 
 namespace SameOldNick\Geolocator;
 
-use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
 use SameOldNick\Geolocator\Contracts\Geolocator;
 use SameOldNick\Geolocator\Support\IPAddressHelper;
@@ -43,26 +43,39 @@ class ServiceProvider extends BaseServiceProvider
             ]);
         }
 
-        $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
-            $config = config('geolocator.drivers.iplocationdb.update.auto_update', []);
+        $this->scheduleUpdateCommand();
+        $this->registerMacros();
+    }
 
-            if (! ($config['enabled'] ?? false) || empty($config['frequency'])) {
-                return;
-            }
+    /**
+     * Schedule the IPLocationDB update command if auto-update is enabled.
+     */
+    protected function scheduleUpdateCommand(): void
+    {
+        $config = config('geolocator.drivers.iplocationdb.update.auto_update', []);
 
-            $schedule->command(Commands\UpdateIPLocationDB::class)->tap(function ($event) use ($config) {
-                $event->description = 'Update IPLocationDB geolocation databases';
+        if (! ($config['enabled'] ?? false) || empty($config['frequency'])) {
+            return;
+        }
 
-                match ($config['frequency']) {
-                    'hourly' => $event->hourly(),
-                    'daily' => $event->daily(),
-                    'weekly' => $event->weekly(),
-                    'monthly' => $event->monthly(),
-                    default => $event->cron($config['frequency']),
-                };
-            })->withoutOverlapping();
-        });
+        Schedule::command(Commands\UpdateIPLocationDB::class)->tap(function ($event) use ($config) {
+            $event->description = 'Update IPLocationDB geolocation databases';
 
+            match ($config['frequency']) {
+                'hourly' => $event->hourly(),
+                'daily' => $event->daily(),
+                'weekly' => $event->weekly(),
+                'monthly' => $event->monthly(),
+                default => $event->cron($config['frequency']),
+            };
+        })->withoutOverlapping();
+    }
+
+    /**
+     * Register the geolocate() macro on the Request class.
+     */
+    protected function registerMacros(): void
+    {
         Request::macro('geolocate', function ($default = '0.0.0.0') {
             $geolocate = app(Geolocate::class);
 
