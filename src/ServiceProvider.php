@@ -43,7 +43,7 @@ class ServiceProvider extends BaseServiceProvider
             ]);
         }
 
-        $this->callAfterResolving(Schedule::class, function (Schedule $schedule, $app) {
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
             $config = config('geolocator.drivers.iplocationdb.update.auto_update', []);
 
             if (! ($config['enabled'] ?? false) || empty($config['frequency'])) {
@@ -68,7 +68,8 @@ class ServiceProvider extends BaseServiceProvider
 
             // Determine the client IP address, ignoring private/internal IPs
             $ip = Arr::first($this->getClientIps(), function ($ip) {
-                return ! IPAddressHelper::isPrivateIPAddress($ip);
+                // getClientIps() yields the raw REMOTE_ADDR value, which may be null
+                return is_string($ip) && ! IPAddressHelper::isPrivateIPAddress($ip);
             }, $this->ip());
 
             return $geolocate->lookup($ip ?? $default);
