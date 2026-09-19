@@ -27,7 +27,7 @@ class CountryHelper
     public static function getCountries(): array
     {
         if (self::$countriesCache === null) {
-            self::$countriesCache = include __DIR__.'/../../data/countries.php';
+            self::$countriesCache = include __DIR__.'/../../resources/data/countries.php';
         }
 
         return self::$countriesCache;
