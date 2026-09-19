@@ -44,9 +44,9 @@ class ServiceProvider extends BaseServiceProvider
         }
 
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule, $app) {
-            $config = config('geolocation.drivers.iplocationdb.update.auto_update', []);
+            $config = config('geolocator.drivers.iplocationdb.update.auto_update', []);
 
-            if (! $config['enabled'] || empty($config['frequency'])) {
+            if (! ($config['enabled'] ?? false) || empty($config['frequency'])) {
                 return;
             }
 

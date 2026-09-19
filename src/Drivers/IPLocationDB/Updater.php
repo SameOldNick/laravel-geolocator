@@ -215,8 +215,11 @@ class Updater
         return $this->getConfig("editions.{$edition}.{$ipVersion}", '');
     }
 
+    /**
+     * Get a value from the driver configuration
+     */
     protected function getConfig(string $key, mixed $default = null): mixed
     {
-        return config("geolocation.drivers.iplocationdb.{$key}", $default);
+        return config("geolocator.drivers.iplocationdb.{$key}", $default);
     }
 }
