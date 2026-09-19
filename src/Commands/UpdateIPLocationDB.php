@@ -5,7 +5,9 @@ namespace SameOldNick\Geolocator\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Number;
 use SameOldNick\Geolocator\Drivers\IPLocationDB\Updater;
+use Stringable;
 use Symfony\Component\Console\Helper\ProgressBar;
+use Throwable;
 
 class UpdateIPLocationDB extends Command
 {
@@ -72,8 +74,27 @@ class UpdateIPLocationDB extends Command
         }
 
         if ($this->option('verbose') && ! empty($context)) {
-            $this->table([], $context);
+            $rows = [];
+
+            foreach ($context as $key => $value) {
+                $rows[] = [$key, $this->formatContextValue($value)];
+            }
+
+            $this->table(['Key', 'Value'], $rows);
         }
+    }
+
+    /**
+     * Format a callback context value for table output.
+     */
+    protected function formatContextValue(mixed $value): string
+    {
+        return match (true) {
+            is_scalar($value) => (string) $value,
+            $value instanceof Throwable => $value->getMessage(),
+            $value instanceof Stringable => (string) $value,
+            default => (string) json_encode($value, JSON_PARTIAL_OUTPUT_ON_ERROR),
+        };
     }
 
     /**
