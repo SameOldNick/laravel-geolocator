@@ -2,20 +2,18 @@
 
 namespace SameOldNick\Geolocator\Drivers\IPLocationDB;
 
+use Exception;
+use Illuminate\Support\Facades\Http;
 use SameOldNick\Geolocator\Events\DatabaseFileUpdated;
 use SameOldNick\Geolocator\Events\DatabaseFileUpdateFailed;
 use SameOldNick\Geolocator\Events\DatabaseUpdatesCompleted;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Http;
 
 class Updater
 {
     /**
      * Constructor
-     *
-     * @param  array  $config  Configuration array
      */
-    public function __construct(protected readonly array $config)
+    public function __construct()
     {
         //
     }
@@ -27,7 +25,7 @@ class Updater
      */
     public function update(?callable $callback = null): void
     {
-        $editions = Arr::get($this->config, 'editions', []);
+        $editions = $this->getConfig('editions', []);
         $total = 0;
 
         /** @var array<int, array{edition: string, ipVersion: string, localPath: string}> */
@@ -46,7 +44,7 @@ class Updater
                     $callback,
                     'info',
                     "Preparing to update {$edition} database ({$ipVersion}).",
-                    ['edition' => $edition, 'ipVersion' => $ipVersion, 'localPath' => $localPath]
+                    ['edition' => $edition, 'ipVersion' => $ipVersion, 'localPath' => $localPath],
                 );
 
                 if (empty($urls)) {
@@ -54,7 +52,7 @@ class Updater
                         $callback,
                         'warning',
                         "No update URLs configured for {$edition} ({$ipVersion}). Skipping.",
-                        ['edition' => $edition, 'ipVersion' => $ipVersion]
+                        ['edition' => $edition, 'ipVersion' => $ipVersion],
                     );
 
                     $failed[] = ['edition' => $edition, 'ipVersion' => $ipVersion, 'localPath' => $localPath, 'reason' => 'No update URLs configured.'];
@@ -67,7 +65,7 @@ class Updater
                     $callback,
                     'info',
                     "Updating {$edition} database ({$ipVersion}) from remote sources.",
-                    ['edition' => $edition, 'ipVersion' => $ipVersion, 'urls' => $urls]
+                    ['edition' => $edition, 'ipVersion' => $ipVersion, 'urls' => $urls],
                 );
 
                 if ($this->updateDatabase($localPath, $urls, $callback)) {
@@ -79,7 +77,6 @@ class Updater
 
                     DatabaseFileUpdateFailed::dispatch($edition, $ipVersion, $localPath, 'All download attempts failed.');
                 }
-
             }
         }
 
@@ -126,10 +123,10 @@ class Updater
                                 $callback,
                                 'download:progress',
                                 "Downloading from {$url}: {$downloadedBytes}/{$downloadTotal} bytes",
-                                ['url' => $url, 'downloadedBytes' => $downloadedBytes, 'downloadTotal' => $downloadTotal]
+                                ['url' => $url, 'downloadedBytes' => $downloadedBytes, 'downloadTotal' => $downloadTotal],
                             );
                         },
-                    ]
+                    ],
                 )->get($url)->throw();
 
                 $this->callCallback($callback, 'download:complete', "Download completed from {$url}", ['url' => $url, 'response' => $response]);
@@ -159,7 +156,7 @@ class Updater
                 } else {
                     $this->callCallback($callback, 'warning', 'Downloaded file is empty. Trying next URL if available.', ['url' => $url]);
                 }
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 $this->callCallback($callback, 'error', "Failed to download from {$url}: ".$e->getMessage(), ['url' => $url, 'exception' => $e]);
             } finally {
                 if (file_exists($tempFile)) {
@@ -197,7 +194,7 @@ class Updater
      */
     protected function getUpdateUrls(string $edition, string $ipVersion): array
     {
-        return $this->config['update']['urls'][$edition][$ipVersion] ?? [];
+        return $this->getConfig("update.urls.{$edition}.{$ipVersion}", []);
     }
 
     /**
@@ -207,7 +204,7 @@ class Updater
      */
     protected function getHttpOptions(): array
     {
-        return $this->config['update']['options']['http'] ?? [];
+        return $this->getConfig('update.options.http', []);
     }
 
     /**
@@ -215,6 +212,11 @@ class Updater
      */
     protected function getDatabasePath(string $edition, string $ipVersion): string
     {
-        return $this->config['editions'][$edition][$ipVersion];
+        return $this->getConfig("editions.{$edition}.{$ipVersion}", '');
+    }
+
+    protected function getConfig(string $key, mixed $default = null): mixed
+    {
+        return config("geolocation.drivers.iplocationdb.{$key}", $default);
     }
 }

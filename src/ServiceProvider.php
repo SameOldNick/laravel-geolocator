@@ -22,10 +22,6 @@ class ServiceProvider extends BaseServiceProvider
             return new Geolocate($app);
         });
 
-        $this->app->bind(Drivers\IPLocationDB\Updater::class, function ($app) {
-            return new Drivers\IPLocationDB\Updater($app['config']->get('geolocation.drivers.iplocationdb'));
-        });
-
         $this->app->alias(Geolocate::class, 'geolocate');
         $this->app->alias(Geolocate::class, Geolocator::class);
     }
