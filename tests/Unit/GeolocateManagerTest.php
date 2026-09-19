@@ -15,7 +15,7 @@ class GeolocateManagerTest extends TestCase
      */
     public function test_default_driver_respects_config(): void
     {
-        config()->set('geolocation.driver', 'iplocationdb');
+        config()->set('geolocator.driver', 'iplocationdb');
 
         $geolocate = new Geolocate($this->app);
 
@@ -27,7 +27,7 @@ class GeolocateManagerTest extends TestCase
      */
     public function test_fake_toggle_changes_default_driver(): void
     {
-        config()->set('geolocation.driver', 'iplocationdb');
+        config()->set('geolocator.driver', 'iplocationdb');
 
         $geolocate = new Geolocate($this->app);
 
@@ -46,7 +46,7 @@ class GeolocateManagerTest extends TestCase
      */
     public function test_driver_instances_created(): void
     {
-        config()->set('geolocation.driver', 'iplocationdb');
+        config()->set('geolocator.driver', 'iplocationdb');
 
         $geolocate = new Geolocate($this->app);
         $this->assertInstanceOf(IpLocationGeolocator::class, $geolocate->driver());

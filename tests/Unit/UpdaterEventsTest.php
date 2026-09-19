@@ -25,24 +25,22 @@ class UpdaterEventsTest extends TestCase
             DatabaseUpdatesCompleted::class,
         ]);
 
-        $config = [
-            'editions' => [
+        config([
+            'geolocator.drivers.iplocationdb.editions' => [
                 'country' => [
                     'ipv4' => 'storage/app/geolocation/country-ipv4.mmdb',
                     'ipv6' => 'storage/app/geolocation/country-ipv6.mmdb',
                 ],
             ],
-            'update' => [
-                'urls' => [
-                    'country' => [
-                        'ipv4' => ['https://example.com/country-ipv4.mmdb'],
-                        'ipv6' => ['https://example.com/country-ipv6.mmdb'],
-                    ],
+            'geolocator.drivers.iplocationdb.update.urls' => [
+                'country' => [
+                    'ipv4' => ['https://example.com/country-ipv4.mmdb'],
+                    'ipv6' => ['https://example.com/country-ipv6.mmdb'],
                 ],
             ],
-        ];
+        ]);
 
-        $updater = new class($config, [true, true]) extends Updater
+        $updater = new class([true, true]) extends Updater
         {
             /** @var array<int, bool> */
             protected array $results;
@@ -50,9 +48,9 @@ class UpdaterEventsTest extends TestCase
             /**
              * @param  array<int, bool>  $results
              */
-            public function __construct(array $config, array $results)
+            public function __construct(array $results)
             {
-                parent::__construct($config);
+                parent::__construct();
 
                 $this->results = $results;
             }
@@ -94,24 +92,22 @@ class UpdaterEventsTest extends TestCase
             DatabaseUpdatesCompleted::class,
         ]);
 
-        $config = [
-            'editions' => [
+        config([
+            'geolocator.drivers.iplocationdb.editions' => [
                 'country' => [
                     'ipv4' => 'storage/app/geolocation/country-ipv4.mmdb',
                     'ipv6' => 'storage/app/geolocation/country-ipv6.mmdb',
                 ],
             ],
-            'update' => [
-                'urls' => [
-                    'country' => [
-                        'ipv4' => [],
-                        'ipv6' => ['https://example.com/country-ipv6.mmdb'],
-                    ],
+            'geolocator.drivers.iplocationdb.update.urls' => [
+                'country' => [
+                    'ipv4' => [],
+                    'ipv6' => ['https://example.com/country-ipv6.mmdb'],
                 ],
             ],
-        ];
+        ]);
 
-        $updater = new class($config, [false]) extends Updater
+        $updater = new class([false]) extends Updater
         {
             /** @var array<int, bool> */
             protected array $results;
@@ -119,9 +115,9 @@ class UpdaterEventsTest extends TestCase
             /**
              * @param  array<int, bool>  $results
              */
-            public function __construct(array $config, array $results)
+            public function __construct(array $results)
             {
-                parent::__construct($config);
+                parent::__construct();
 
                 $this->results = $results;
             }
