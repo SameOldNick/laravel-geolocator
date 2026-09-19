@@ -36,7 +36,7 @@ class Geolocate extends Manager implements Contracts\Geolocator
      */
     public function getDefaultDriver()
     {
-        return $this->isFake ? 'fake' : $this->config->get('geolocation.driver');
+        return $this->isFake ? 'fake' : $this->config->get('geolocator.driver');
     }
 
     /**
@@ -46,7 +46,7 @@ class Geolocate extends Manager implements Contracts\Geolocator
      */
     public function createIplocationdbDriver()
     {
-        return new IPLocationDB\Geolocator($this->config->get('geolocation.drivers.iplocationdb'));
+        return new IPLocationDB\Geolocator($this->config->get('geolocator.drivers.iplocationdb'));
     }
 
     /**
@@ -56,7 +56,7 @@ class Geolocate extends Manager implements Contracts\Geolocator
      */
     public function createFakeDriver()
     {
-        return new FakeGeolocator($this->config->get('geolocation.drivers.fake.chance_of_empty', 10));
+        return new FakeGeolocator($this->config->get('geolocator.drivers.fake.chance_of_empty', 10));
     }
 
     /**
