@@ -3,10 +3,10 @@
 namespace SameOldNick\Geolocator\Tests\Unit;
 
 use Illuminate\Support\Facades\Event;
-use SameOldNick\Geolocator\Drivers\IPLocationDB\Updater;
 use SameOldNick\Geolocator\Events\DatabaseFileUpdated;
 use SameOldNick\Geolocator\Events\DatabaseFileUpdateFailed;
 use SameOldNick\Geolocator\Events\DatabaseUpdatesCompleted;
+use SameOldNick\Geolocator\Tests\Fixtures\ScriptedUpdater;
 use SameOldNick\Geolocator\Tests\TestCase;
 
 /**
@@ -40,29 +40,7 @@ class UpdaterEventsTest extends TestCase
             ],
         ]);
 
-        $updater = new class([true, true]) extends Updater
-        {
-            /** @var array<int, bool> */
-            protected array $results;
-
-            /**
-             * @param  array<int, bool>  $results
-             */
-            public function __construct(array $results)
-            {
-                parent::__construct();
-
-                $this->results = $results;
-            }
-
-            /**
-             * @param  array<int, string>  $urls
-             */
-            protected function updateDatabase(string $localPath, array $urls, ?callable $callback = null): bool
-            {
-                return array_shift($this->results) ?? false;
-            }
-        };
+        $updater = new ScriptedUpdater([true, true]);
 
         $updater->update();
 
@@ -107,29 +85,7 @@ class UpdaterEventsTest extends TestCase
             ],
         ]);
 
-        $updater = new class([false]) extends Updater
-        {
-            /** @var array<int, bool> */
-            protected array $results;
-
-            /**
-             * @param  array<int, bool>  $results
-             */
-            public function __construct(array $results)
-            {
-                parent::__construct();
-
-                $this->results = $results;
-            }
-
-            /**
-             * @param  array<int, string>  $urls
-             */
-            protected function updateDatabase(string $localPath, array $urls, ?callable $callback = null): bool
-            {
-                return array_shift($this->results) ?? false;
-            }
-        };
+        $updater = new ScriptedUpdater([false]);
 
         $updater->update();
 
