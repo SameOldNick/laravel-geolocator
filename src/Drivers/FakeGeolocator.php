@@ -2,6 +2,8 @@
 
 namespace SameOldNick\Geolocator\Drivers;
 
+use Faker\Generator;
+use Illuminate\Support\Arr;
 use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
 use SameOldNick\Geolocator\DTOs\AsnResult;
 use SameOldNick\Geolocator\DTOs\CityResult;
@@ -9,8 +11,6 @@ use SameOldNick\Geolocator\DTOs\CountryResult;
 use SameOldNick\Geolocator\DTOs\LocationResult;
 use SameOldNick\Geolocator\Support\CountryHelper;
 use SameOldNick\Geolocator\Support\IPAddressHelper;
-use Faker\Generator;
-use Illuminate\Support\Arr;
 
 class FakeGeolocator implements GeolocatorContract
 {
@@ -51,7 +51,7 @@ class FakeGeolocator implements GeolocatorContract
     public function lookup(string $ip): LocationResult
     {
         if (Arr::has($this->mockedResults, $ip)) {
-            return $this->mockedResults[$ip];
+            return $this->mockedResults[$ip] ?? $this->createEmptyResult($ip);
         }
 
         if ($this->shouldReturnEmpty() || $this->isPrivateIpAddress($ip)) {
@@ -72,7 +72,7 @@ class FakeGeolocator implements GeolocatorContract
     public function lookupCountry(string $ip): LocationResult
     {
         if (Arr::has($this->mockedResults, $ip)) {
-            return $this->mockedResults[$ip];
+            return $this->mockedResults[$ip] ?? $this->createEmptyResult($ip);
         }
 
         if ($this->shouldReturnEmpty() || $this->isPrivateIpAddress($ip)) {
@@ -93,7 +93,7 @@ class FakeGeolocator implements GeolocatorContract
     public function lookupCity(string $ip): LocationResult
     {
         if (Arr::has($this->mockedResults, $ip)) {
-            return $this->mockedResults[$ip];
+            return $this->mockedResults[$ip] ?? $this->createEmptyResult($ip);
         }
 
         if ($this->shouldReturnEmpty() || $this->isPrivateIpAddress($ip)) {
@@ -114,7 +114,7 @@ class FakeGeolocator implements GeolocatorContract
     public function lookupAsn(string $ip): LocationResult
     {
         if (Arr::has($this->mockedResults, $ip)) {
-            return $this->mockedResults[$ip];
+            return $this->mockedResults[$ip] ?? $this->createEmptyResult($ip);
         }
 
         if ($this->shouldReturnEmpty() || $this->isPrivateIpAddress($ip)) {
