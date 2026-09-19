@@ -82,4 +82,18 @@ class FakeGeolocatorTest extends TestCase
         $this->assertNull($asnResult->city);
         $this->assertNotNull($asnResult->asn);
     }
+
+    /**
+     * Test that mocking an address without a result yields an empty result.
+     */
+    public function test_mocking_an_address_without_a_result_yields_an_empty_result(): void
+    {
+        $geolocator = new FakeGeolocator(0);
+        $geolocator->mock('8.8.8.8');
+
+        $result = $geolocator->lookup('8.8.8.8');
+
+        $this->assertSame('8.8.8.8', $result->ipAddress);
+        $this->assertFalse($result->hasResults());
+    }
 }

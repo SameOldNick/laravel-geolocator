@@ -3,6 +3,7 @@
 namespace SameOldNick\Geolocator\Tests\Feature;
 
 use Illuminate\Http\Request;
+use InvalidArgumentException;
 use ReflectionProperty;
 use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
 use SameOldNick\Geolocator\Drivers\FakeGeolocator;
@@ -248,6 +249,64 @@ class GeolocateTest extends TestCase
         $request = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => self::PUBLIC_IP]);
 
         $this->assertSame($result, $request->geolocate());
+    }
+
+    /**
+     * Ensure the request macro falls back to the default when the request has no address.
+     */
+    public function test_request_macro_uses_the_default_when_no_ip_is_available(): void
+    {
+        $recorder = $this->useRecordingDriver();
+
+        // Symfony leaves REMOTE_ADDR unset for requests built outside a server context.
+        $request = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => null]);
+
+        $this->assertSame($recorder->result, $request->geolocate());
+        $this->assertSame('0.0.0.0', $recorder->calls[0]['ip']);
+    }
+
+    /**
+     * Ensure the request macro honours a custom default.
+     */
+    public function test_request_macro_honours_a_custom_default(): void
+    {
+        $recorder = $this->useRecordingDriver();
+
+        $request = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => null]);
+
+        $this->assertSame($recorder->result, $request->geolocate('1.2.3.4'));
+        $this->assertSame('1.2.3.4', $recorder->calls[0]['ip']);
+    }
+
+    /**
+     * Ensure an unsupported driver name fails loudly.
+     */
+    public function test_an_unsupported_driver_name_fails(): void
+    {
+        config()->set('geolocator.driver', 'redis');
+
+        $geolocate = $this->geolocate();
+        $geolocate->forgetDrivers();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('redis');
+
+        $geolocate->lookup(self::PUBLIC_IP);
+    }
+
+    /**
+     * Ensure a missing driver configuration fails loudly rather than silently defaulting.
+     */
+    public function test_a_missing_driver_configuration_fails(): void
+    {
+        config()->set('geolocator.driver', null);
+
+        $geolocate = $this->geolocate();
+        $geolocate->forgetDrivers();
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $geolocate->lookup(self::PUBLIC_IP);
     }
 
     /**

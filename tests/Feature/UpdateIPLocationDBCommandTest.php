@@ -105,4 +105,31 @@ class UpdateIPLocationDBCommandTest extends TestCase
                 && $event->hasFailures() === true;
         });
     }
+
+    /**
+     * Ensure the verbose option renders the callback context as a table.
+     */
+    public function test_command_verbose_option_renders_the_callback_context(): void
+    {
+        Event::fake([DatabaseUpdatesCompleted::class]);
+
+        config()->set('geolocator.drivers.iplocationdb.editions', [
+            'country' => [
+                'ipv4' => 'storage/app/geolocation/country-ipv4.mmdb',
+                'ipv6' => 'storage/app/geolocation/country-ipv6.mmdb',
+            ],
+        ]);
+        config()->set('geolocator.drivers.iplocationdb.update.urls', [
+            'country' => [
+                'ipv4' => ['https://example.com/country-ipv4.mmdb'],
+                'ipv6' => ['https://example.com/country-ipv6.mmdb'],
+            ],
+        ]);
+
+        $this->instance(Updater::class, new ScriptedUpdater([true, true]));
+
+        $this->artisan('geolocation:update-iplocationdb', ['--verbose' => true])
+            ->expectsOutputToContain('localPath')
+            ->assertSuccessful();
+    }
 }
