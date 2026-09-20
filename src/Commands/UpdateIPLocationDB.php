@@ -38,7 +38,7 @@ class UpdateIPLocationDB extends Command
     {
         $this->info('Starting IP Location DB update...');
 
-        $updater->update(function (string $type, string $message, array $context) {
+        $updated = $updater->update(function (string $type, string $message, array $context) {
             if (in_array($type, ['info', 'warning', 'error'])) {
                 $this->handleLog($type, $message, $context);
             } elseif (str_starts_with($type, 'download:')) {
@@ -46,7 +46,11 @@ class UpdateIPLocationDB extends Command
             }
         });
 
-        $this->info('IP Location DB update completed.');
+        if ($updated) {
+            $this->info('IP Location DB update completed successfully.');
+        } else {
+            $this->warn('IP Location DB update completed with some failures. See the errors above.');
+        }
     }
 
     /**

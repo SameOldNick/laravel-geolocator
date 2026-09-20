@@ -23,7 +23,7 @@ class Updater
      *
      * @param  callable|null  $callback  Optional callback for progress reporting
      */
-    public function update(?callable $callback = null): void
+    public function update(?callable $callback = null): bool
     {
         $editions = $this->getConfig('editions', []);
         $total = 0;
@@ -73,6 +73,13 @@ class Updater
 
                     DatabaseFileUpdated::dispatch($edition, $ipVersion, $localPath);
                 } else {
+                    $this->callCallback(
+                        $callback,
+                        'error',
+                        "Failed to update {$edition} database ({$ipVersion}).",
+                        ['edition' => $edition, 'ipVersion' => $ipVersion, 'localPath' => $localPath],
+                    );
+
                     $failed[] = ['edition' => $edition, 'ipVersion' => $ipVersion, 'localPath' => $localPath, 'reason' => 'All download attempts failed.'];
 
                     DatabaseFileUpdateFailed::dispatch($edition, $ipVersion, $localPath, 'All download attempts failed.');
@@ -87,6 +94,8 @@ class Updater
             'successful' => $successful,
             'failed' => $failed,
         ]);
+
+        return count($failed) === 0;
     }
 
     /**

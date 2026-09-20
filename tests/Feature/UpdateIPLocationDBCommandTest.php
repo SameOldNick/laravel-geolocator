@@ -51,7 +51,7 @@ class UpdateIPLocationDBCommandTest extends TestCase
 
         $this->artisan('geolocation:update-iplocationdb')
             ->expectsOutputToContain('Starting IP Location DB update...')
-            ->expectsOutputToContain('IP Location DB update completed.')
+            ->expectsOutputToContain('IP Location DB update completed successfully.')
             ->assertSuccessful();
 
         Event::assertDispatched(DatabaseUpdatesCompleted::class, function (DatabaseUpdatesCompleted $event) {
@@ -87,10 +87,11 @@ class UpdateIPLocationDBCommandTest extends TestCase
 
         $this->instance(Updater::class, new ScriptedUpdater([false, false]));
 
-        // Failed downloads only surface through events: update() never passes a message to
-        // the progress callback on that branch, so nothing about the failure reaches the console.
+        // Each failed edition is reported on the console as well as through its event.
         $this->artisan('geolocation:update-iplocationdb')
-            ->expectsOutputToContain('IP Location DB update completed.')
+            ->expectsOutputToContain('Failed to update country database (ipv4).')
+            ->expectsOutputToContain('Failed to update country database (ipv6).')
+            ->expectsOutputToContain('IP Location DB update completed with some failures.')
             ->assertSuccessful();
 
         Event::assertDispatched(DatabaseFileUpdateFailed::class, function (DatabaseFileUpdateFailed $event) {
@@ -104,6 +105,37 @@ class UpdateIPLocationDBCommandTest extends TestCase
                 && count($event->failed) === 2
                 && $event->hasFailures() === true;
         });
+    }
+
+    /**
+     * Ensure a failed edition is reported with its context when verbose.
+     */
+    public function test_command_verbose_option_shows_failure_context(): void
+    {
+        Event::fake([
+            DatabaseFileUpdateFailed::class,
+            DatabaseUpdatesCompleted::class,
+        ]);
+
+        config()->set('geolocator.drivers.iplocationdb.editions', [
+            'country' => [
+                'ipv4' => 'storage/app/geolocation/country-ipv4.mmdb',
+                'ipv6' => 'storage/app/geolocation/country-ipv6.mmdb',
+            ],
+        ]);
+        config()->set('geolocator.drivers.iplocationdb.update.urls', [
+            'country' => [
+                'ipv4' => ['https://example.com/country-ipv4.mmdb'],
+                'ipv6' => ['https://example.com/country-ipv6.mmdb'],
+            ],
+        ]);
+
+        $this->instance(Updater::class, new ScriptedUpdater([false, false]));
+
+        $this->artisan('geolocation:update-iplocationdb', ['--verbose' => true])
+            ->expectsOutputToContain('Failed to update country database (ipv4).')
+            ->expectsOutputToContain('localPath')
+            ->assertSuccessful();
     }
 
     /**
