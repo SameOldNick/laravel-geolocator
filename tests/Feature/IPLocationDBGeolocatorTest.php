@@ -4,25 +4,29 @@ namespace SameOldNick\Geolocator\Tests\Feature;
 
 use InvalidArgumentException;
 use ReflectionMethod;
-use SameOldNick\Geolocator\Drivers\IPLocationDB\Geolocator;
+use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
+use SameOldNick\Geolocator\Facades\Geolocate;
 use SameOldNick\Geolocator\Tests\TestCase;
 
 /**
- * The default driver. Real lookups need a MaxMind .mmdb fixture, which neither the package
- * nor the reader dependency ships, so this covers the wiring and the failure mode.
+ * The default driver, reached through the facade. Real lookups need a MaxMind .mmdb fixture, which
+ * neither the package nor the reader dependency ships, so this covers the wiring and the failure mode.
  *
  * @internal
  */
 class IPLocationDBGeolocatorTest extends TestCase
 {
     /**
-     * Build a driver for the given editions.
+     * Point the country edition at the given paths and resolve the driver through the facade.
      *
-     * @param  array<string, array<string, string>>  $editions
+     * @param  array<string, string>  $paths  Local database path per IP version
      */
-    protected function driver(array $editions): Geolocator
+    protected function driverFor(array $paths): GeolocatorContract
     {
-        return new Geolocator(['editions' => $editions]);
+        config()->set('geolocator.drivers.iplocationdb.editions', ['country' => $paths]);
+        Geolocate::forgetDrivers();
+
+        return Geolocate::driver('iplocationdb');
     }
 
     /**
@@ -39,11 +43,9 @@ class IPLocationDBGeolocatorTest extends TestCase
      */
     public function test_the_ip_version_selects_the_matching_database(): void
     {
-        $driver = $this->driver([
-            'country' => [
-                'ipv4' => 'storage/app/geolocation/country-ipv4.mmdb',
-                'ipv6' => 'storage/app/geolocation/country-ipv6.mmdb',
-            ],
+        $driver = $this->driverFor([
+            'ipv4' => 'storage/app/geolocation/country-ipv4.mmdb',
+            'ipv6' => 'storage/app/geolocation/country-ipv6.mmdb',
         ]);
 
         $getDatabasePath = new ReflectionMethod($driver, 'getDatabasePath');
@@ -63,15 +65,13 @@ class IPLocationDBGeolocatorTest extends TestCase
      */
     public function test_a_missing_database_file_surfaces_an_error(): void
     {
-        $driver = $this->driver([
-            'country' => [
-                'ipv4' => $this->missingPath(),
-                'ipv6' => $this->missingPath(),
-            ],
+        $this->driverFor([
+            'ipv4' => $this->missingPath(),
+            'ipv6' => $this->missingPath(),
         ]);
 
         $this->expectException(InvalidArgumentException::class);
 
-        $driver->lookupCountry('8.8.8.8');
+        Geolocate::lookupCountry('8.8.8.8');
     }
 }

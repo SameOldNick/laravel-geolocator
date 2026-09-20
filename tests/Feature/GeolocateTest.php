@@ -6,14 +6,16 @@ use Illuminate\Http\Request;
 use InvalidArgumentException;
 use ReflectionProperty;
 use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
-use SameOldNick\Geolocator\Drivers\FakeGeolocator;
 use SameOldNick\Geolocator\Drivers\IPLocationDB\Geolocator as IpLocationDbGeolocator;
 use SameOldNick\Geolocator\DTOs\LocationResult;
-use SameOldNick\Geolocator\Geolocate;
+use SameOldNick\Geolocator\Facades\Geolocate;
+use SameOldNick\Geolocator\Geolocate as GeolocateManager;
 use SameOldNick\Geolocator\Tests\Fixtures\RecordingGeolocator;
 use SameOldNick\Geolocator\Tests\TestCase;
 
 /**
+ * Covers lookups, driver resolution and the request macro through the facade.
+ *
  * @internal
  */
 class GeolocateTest extends TestCase
@@ -34,25 +36,16 @@ class GeolocateTest extends TestCase
     }
 
     /**
-     * Resolve the manager from the container.
-     */
-    protected function geolocate(): Geolocate
-    {
-        return $this->app->make(Geolocate::class);
-    }
-
-    /**
      * Register a recording driver and make it the configured default driver.
      */
     protected function useRecordingDriver(): RecordingGeolocator
     {
         $recorder = new RecordingGeolocator($this->cannedResult());
 
-        $geolocate = $this->geolocate();
-        $geolocate->extend('recording', fn () => $recorder);
+        Geolocate::extend('recording', fn () => $recorder);
 
         config()->set('geolocator.driver', 'recording');
-        $geolocate->forgetDrivers();
+        Geolocate::forgetDrivers();
 
         return $recorder;
     }
@@ -71,22 +64,15 @@ class GeolocateTest extends TestCase
     }
 
     /**
-     * Ensure the manager is bound as a singleton.
+     * Ensure the facade and the container aliases resolve the same manager instance.
      */
-    public function test_geolocate_is_registered_as_a_singleton(): void
+    public function test_facade_and_container_aliases_share_the_manager(): void
     {
-        $this->assertSame($this->geolocate(), $this->geolocate());
-    }
+        $manager = $this->app->make(GeolocateManager::class);
 
-    /**
-     * Ensure both container aliases resolve to the singleton manager.
-     */
-    public function test_geolocate_aliases_resolve_to_the_same_instance(): void
-    {
-        $geolocate = $this->geolocate();
-
-        $this->assertSame($geolocate, $this->app->make('geolocate'));
-        $this->assertSame($geolocate, $this->app->make(GeolocatorContract::class));
+        $this->assertSame($manager, $this->app->make('geolocate'));
+        $this->assertSame($manager, $this->app->make(GeolocatorContract::class));
+        $this->assertSame($manager, Geolocate::getFacadeRoot());
     }
 
     /**
@@ -95,50 +81,41 @@ class GeolocateTest extends TestCase
     public function test_default_driver_comes_from_config(): void
     {
         config()->set('geolocator.driver', 'iplocationdb');
-        $geolocate = $this->geolocate();
-        $geolocate->forgetDrivers();
+        Geolocate::forgetDrivers();
 
-        $this->assertSame('iplocationdb', $geolocate->getDefaultDriver());
-        $this->assertInstanceOf(IpLocationDbGeolocator::class, $geolocate->driver());
-
-        config()->set('geolocator.driver', 'fake');
-        $geolocate->forgetDrivers();
-
-        $this->assertSame('fake', $geolocate->getDefaultDriver());
-        $this->assertInstanceOf(FakeGeolocator::class, $geolocate->driver());
+        $this->assertSame('iplocationdb', Geolocate::getDefaultDriver());
+        $this->assertInstanceOf(IpLocationDbGeolocator::class, Geolocate::driver());
     }
 
     /**
-     * Ensure the default driver falls back to the fake driver when faking.
+     * Ensure a driver registered with extend() can be selected through the config.
      */
-    public function test_fake_toggle_overrides_the_configured_driver(): void
+    public function test_an_extended_driver_can_be_selected_through_config(): void
     {
-        config()->set('geolocator.driver', 'iplocationdb');
+        $recorder = $this->useRecordingDriver();
 
-        $geolocate = $this->geolocate();
-        $geolocate->forgetDrivers();
-        $this->assertInstanceOf(IpLocationDbGeolocator::class, $geolocate->driver());
-
-        $geolocate->fake();
-        $this->assertSame('fake', $geolocate->getDefaultDriver());
-        $this->assertInstanceOf(FakeGeolocator::class, $geolocate->driver());
-
-        $geolocate->fake(false);
-        $geolocate->forgetDrivers();
-        $this->assertSame('iplocationdb', $geolocate->getDefaultDriver());
-        $this->assertInstanceOf(IpLocationDbGeolocator::class, $geolocate->driver());
+        $this->assertSame('recording', Geolocate::getDefaultDriver());
+        $this->assertSame($recorder, Geolocate::driver());
     }
 
     /**
-     * Ensure faking is visible through every alias of the manager.
+     * Ensure every lookup method is delegated to the active driver.
      */
-    public function test_fake_toggle_is_shared_across_the_container(): void
+    public function test_lookup_methods_delegate_to_the_active_driver(): void
     {
-        $this->geolocate()->fake();
+        $recorder = $this->useRecordingDriver();
 
-        $this->assertTrue($this->app->make('geolocate')->isFake());
-        $this->assertTrue($this->app->make(GeolocatorContract::class)->isFake());
-        $this->assertInstanceOf(FakeGeolocator::class, $this->app->make(GeolocatorContract::class)->driver());
+        $this->assertSame($recorder->result, Geolocate::lookup(self::PUBLIC_IP));
+        $this->assertSame($recorder->result, Geolocate::lookupCountry(self::PUBLIC_IP));
+        $this->assertSame($recorder->result, Geolocate::lookupCity(self::PUBLIC_IP));
+        $this->assertSame($recorder->result, Geolocate::lookupAsn(self::PUBLIC_IP));
+
+        $this->assertSame([
+            ['method' => 'lookup', 'ip' => self::PUBLIC_IP],
+            ['method' => 'lookupCountry', 'ip' => self::PUBLIC_IP],
+            ['method' => 'lookupCity', 'ip' => self::PUBLIC_IP],
+            ['method' => 'lookupAsn', 'ip' => self::PUBLIC_IP],
+        ], $recorder->calls);
     }
 
     /**
@@ -146,27 +123,7 @@ class GeolocateTest extends TestCase
      */
     public function test_driver_instances_are_cached_per_name(): void
     {
-        $geolocate = $this->geolocate();
-
-        $this->assertSame($geolocate->driver('fake'), $geolocate->driver('fake'));
-        $this->assertNotSame($geolocate->driver('fake'), $geolocate->driver('iplocationdb'));
-    }
-
-    /**
-     * Ensure the fake driver is created with the configured chance of an empty result.
-     */
-    public function test_fake_driver_receives_configured_chance_of_empty(): void
-    {
-        config()->set('geolocator.drivers.fake.chance_of_empty', 100);
-
-        $geolocate = $this->geolocate();
-        $geolocate->fake();
-        $geolocate->forgetDrivers();
-
-        $driver = $geolocate->driver();
-        $this->assertInstanceOf(FakeGeolocator::class, $driver);
-        $this->assertSame(100, $driver->chanceOfEmpty);
-        $this->assertFalse($driver->lookup(self::PUBLIC_IP)->hasResults());
+        $this->assertSame(Geolocate::driver('iplocationdb'), Geolocate::driver('iplocationdb'));
     }
 
     /**
@@ -176,11 +133,9 @@ class GeolocateTest extends TestCase
     {
         $path = storage_path('app/geolocation/custom-country.mmdb');
         config()->set('geolocator.drivers.iplocationdb.editions.country.ipv4', $path);
+        Geolocate::forgetDrivers();
 
-        $geolocate = $this->geolocate();
-        $geolocate->forgetDrivers();
-
-        $driver = $geolocate->driver('iplocationdb');
+        $driver = Geolocate::driver('iplocationdb');
         $this->assertInstanceOf(IpLocationDbGeolocator::class, $driver);
 
         $config = (new ReflectionProperty(IpLocationDbGeolocator::class, 'config'))->getValue($driver);
@@ -189,66 +144,43 @@ class GeolocateTest extends TestCase
     }
 
     /**
-     * Ensure lookup is delegated to the active driver and its result is returned.
+     * Ensure an unsupported driver name fails loudly.
      */
-    public function test_lookup_delegates_to_the_active_driver(): void
+    public function test_an_unsupported_driver_name_fails(): void
     {
-        $recorder = $this->useRecordingDriver();
+        config()->set('geolocator.driver', 'redis');
+        Geolocate::forgetDrivers();
 
-        $this->assertSame($recorder->result, $this->geolocate()->lookup(self::PUBLIC_IP));
-        $this->assertSame([['method' => 'lookup', 'ip' => self::PUBLIC_IP]], $recorder->calls);
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('redis');
+
+        Geolocate::lookup(self::PUBLIC_IP);
     }
 
     /**
-     * Ensure lookupCountry is delegated to the active driver.
+     * Ensure a missing driver configuration fails loudly rather than silently defaulting.
      */
-    public function test_lookup_country_delegates_to_the_active_driver(): void
+    public function test_a_missing_driver_configuration_fails(): void
     {
-        $recorder = $this->useRecordingDriver();
+        config()->set('geolocator.driver', null);
+        Geolocate::forgetDrivers();
 
-        $this->assertSame($recorder->result, $this->geolocate()->lookupCountry(self::PUBLIC_IP));
-        $this->assertSame([['method' => 'lookupCountry', 'ip' => self::PUBLIC_IP]], $recorder->calls);
+        $this->expectException(InvalidArgumentException::class);
+
+        Geolocate::lookup(self::PUBLIC_IP);
     }
 
     /**
-     * Ensure lookupCity is delegated to the active driver.
+     * Ensure the request macro resolves the configured driver.
      */
-    public function test_lookup_city_delegates_to_the_active_driver(): void
+    public function test_request_macro_uses_the_configured_driver(): void
     {
         $recorder = $this->useRecordingDriver();
-
-        $this->assertSame($recorder->result, $this->geolocate()->lookupCity(self::PUBLIC_IP));
-        $this->assertSame([['method' => 'lookupCity', 'ip' => self::PUBLIC_IP]], $recorder->calls);
-    }
-
-    /**
-     * Ensure lookupAsn is delegated to the active driver.
-     */
-    public function test_lookup_asn_delegates_to_the_active_driver(): void
-    {
-        $recorder = $this->useRecordingDriver();
-
-        $this->assertSame($recorder->result, $this->geolocate()->lookupAsn(self::PUBLIC_IP));
-        $this->assertSame([['method' => 'lookupAsn', 'ip' => self::PUBLIC_IP]], $recorder->calls);
-    }
-
-    /**
-     * Ensure the request macro resolves the manager from the container when faking is enabled.
-     */
-    public function test_request_macro_uses_the_fake_driver_registered_on_the_manager(): void
-    {
-        $geolocate = $this->geolocate();
-        $geolocate->fake();
-
-        $driver = $geolocate->driver();
-        $this->assertInstanceOf(FakeGeolocator::class, $driver);
-
-        $result = $this->cannedResult();
-        $driver->mock(self::PUBLIC_IP, $result);
 
         $request = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => self::PUBLIC_IP]);
 
-        $this->assertSame($result, $request->geolocate());
+        $this->assertSame($recorder->result, $request->geolocate());
+        $this->assertSame(self::PUBLIC_IP, $recorder->calls[0]['ip']);
     }
 
     /**
@@ -276,37 +208,6 @@ class GeolocateTest extends TestCase
 
         $this->assertSame($recorder->result, $request->geolocate('1.2.3.4'));
         $this->assertSame('1.2.3.4', $recorder->calls[0]['ip']);
-    }
-
-    /**
-     * Ensure an unsupported driver name fails loudly.
-     */
-    public function test_an_unsupported_driver_name_fails(): void
-    {
-        config()->set('geolocator.driver', 'redis');
-
-        $geolocate = $this->geolocate();
-        $geolocate->forgetDrivers();
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('redis');
-
-        $geolocate->lookup(self::PUBLIC_IP);
-    }
-
-    /**
-     * Ensure a missing driver configuration fails loudly rather than silently defaulting.
-     */
-    public function test_a_missing_driver_configuration_fails(): void
-    {
-        config()->set('geolocator.driver', null);
-
-        $geolocate = $this->geolocate();
-        $geolocate->forgetDrivers();
-
-        $this->expectException(InvalidArgumentException::class);
-
-        $geolocate->lookup(self::PUBLIC_IP);
     }
 
     /**
@@ -354,5 +255,24 @@ class GeolocateTest extends TestCase
 
         $this->assertSame($recorder->result, $request->geolocate());
         $this->assertSame('10.0.0.5', $recorder->calls[0]['ip']);
+    }
+
+    /**
+     * Characterisation test: the macro resolves the manager class, so a facade fake does not reach
+     * it — the macro keeps using the configured driver while facade calls go to the swapped fake.
+     * Delete this once the macro resolves the contract instead.
+     */
+    public function test_request_macro_is_unaffected_by_a_facade_fake(): void
+    {
+        $recorder = $this->useRecordingDriver();
+
+        Geolocate::fake();
+
+        $request = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => self::PUBLIC_IP]);
+
+        $this->assertSame($recorder->result, $request->geolocate());
+        $this->assertSame([['method' => 'lookup', 'ip' => self::PUBLIC_IP]], $recorder->calls);
+
+        $this->assertNotSame($recorder->result, Geolocate::lookup(self::PUBLIC_IP));
     }
 }

@@ -2,7 +2,6 @@
 
 namespace SameOldNick\Geolocator\Tests\Feature;
 
-use Illuminate\Support\Facades\Facade;
 use ReflectionMethod;
 use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
 use SameOldNick\Geolocator\Drivers\FakeGeolocator;
@@ -13,6 +12,8 @@ use SameOldNick\Geolocator\Tests\Fixtures\RecordingGeolocator;
 use SameOldNick\Geolocator\Tests\TestCase;
 
 /**
+ * Covers the facade itself: how it resolves, and how fake() swaps it out.
+ *
  * @internal
  */
 class GeolocateFacadeTest extends TestCase
@@ -37,15 +38,86 @@ class GeolocateFacadeTest extends TestCase
     }
 
     /**
-     * Ensure every lookup method on the facade reaches the active driver.
+     * Ensure nothing is faked until fake() is called.
      */
-    public function test_facade_delegates_lookups_to_the_active_driver(): void
+    public function test_the_facade_is_not_faking_by_default(): void
     {
-        $geolocate = $this->app->make(GeolocateManager::class);
-        $geolocate->fake();
+        $this->assertFalse(Geolocate::isFake());
+        $this->assertNotInstanceOf(FakeGeolocator::class, Geolocate::getFacadeRoot());
+    }
 
-        $driver = $geolocate->driver('fake');
-        $this->assertInstanceOf(FakeGeolocator::class, $driver);
+    /**
+     * Ensure fake() swaps the root for a fake geolocator and reports it as faking.
+     */
+    public function test_fake_swaps_the_root_with_a_fake_geolocator(): void
+    {
+        $fake = Geolocate::fake();
+
+        $this->assertInstanceOf(FakeGeolocator::class, $fake);
+        $this->assertSame($fake, Geolocate::getFacadeRoot());
+        $this->assertTrue(Geolocate::isFake());
+    }
+
+    /**
+     * Ensure fake() binds the fake into the container under the contract.
+     */
+    public function test_fake_binds_the_fake_into_the_container(): void
+    {
+        $fake = Geolocate::fake();
+
+        // Facade::swap() rebinds the contract, so anything resolving it gets the fake too.
+        $this->assertSame($fake, $this->app->make(GeolocatorContract::class));
+    }
+
+    /**
+     * Ensure fake() only rebinds the contract, leaving the concrete manager resolution untouched.
+     */
+    public function test_fake_leaves_the_manager_binding_untouched(): void
+    {
+        $manager = $this->app->make(GeolocateManager::class);
+
+        $fake = Geolocate::fake();
+
+        $this->assertSame($manager, $this->app->make(GeolocateManager::class));
+        $this->assertSame($manager, $this->app->make('geolocate'));
+        $this->assertSame($fake, $this->app->make(GeolocatorContract::class));
+    }
+
+    /**
+     * Ensure the chance of an empty result can be set through fake().
+     */
+    public function test_fake_honours_the_chance_of_empty(): void
+    {
+        $fake = Geolocate::fake(100);
+
+        $this->assertSame(100, $fake->chanceOfEmpty);
+        $this->assertFalse(Geolocate::lookup('8.8.8.8')->hasResults());
+    }
+
+    /**
+     * Ensure the real manager can be swapped back in after faking.
+     */
+    public function test_the_real_manager_can_be_swapped_back_in(): void
+    {
+        $manager = $this->app->make(GeolocateManager::class);
+
+        Geolocate::fake();
+
+        $this->assertTrue(Geolocate::isFake());
+
+        Geolocate::swap($this->app->make(GeolocateManager::class));
+
+        $this->assertFalse(Geolocate::isFake());
+        $this->assertSame($manager, Geolocate::getFacadeRoot());
+        $this->assertSame($manager, $this->app->make(GeolocatorContract::class));
+    }
+
+    /**
+     * Ensure mocked results are returned through the facade.
+     */
+    public function test_mocked_results_are_returned_through_the_facade(): void
+    {
+        $fake = Geolocate::fake();
 
         $result = new LocationResult(
             ipAddress: '8.8.8.8',
@@ -54,39 +126,12 @@ class GeolocateFacadeTest extends TestCase
             asn: null,
         );
 
-        $driver->mock('8.8.8.8', $result);
+        $fake->mock('8.8.8.8', $result);
 
         $this->assertSame($result, Geolocate::lookup('8.8.8.8'));
         $this->assertSame($result, Geolocate::lookupCountry('8.8.8.8'));
         $this->assertSame($result, Geolocate::lookupCity('8.8.8.8'));
         $this->assertSame($result, Geolocate::lookupAsn('8.8.8.8'));
-    }
-
-    /**
-     * Ensure state toggled through the container is visible through the facade.
-     */
-    public function test_fake_toggled_on_the_container_is_visible_through_the_facade(): void
-    {
-        $this->app->make(GeolocateManager::class)->fake();
-
-        $this->assertInstanceOf(FakeGeolocator::class, Geolocate::driver());
-        $this->assertSame('fake', Geolocate::getDefaultDriver());
-        $this->assertTrue(Geolocate::getFacadeRoot()->isFake());
-    }
-
-    /**
-     * Ensure faking can be toggled through the facade itself.
-     */
-    public function test_fake_can_be_toggled_through_the_facade(): void
-    {
-        Geolocate::fake();
-
-        $this->assertInstanceOf(FakeGeolocator::class, Geolocate::driver());
-        $this->assertTrue(Geolocate::getFacadeRoot()->isFake());
-
-        Geolocate::fake(false);
-
-        $this->assertFalse(Geolocate::getFacadeRoot()->isFake());
     }
 
     /**
@@ -108,22 +153,5 @@ class GeolocateFacadeTest extends TestCase
         Geolocate::forgetDrivers();
 
         $this->assertSame($result, Geolocate::lookup('8.8.8.8'));
-    }
-
-    /**
-     * Characterisation test: Facade::isFake() is public static and shadows the manager's isFake(),
-     * so Geolocate::isFake() reports the framework's fake state instead of the package's toggle.
-     * Delete this test once the collision is resolved.
-     */
-    public function test_is_fake_is_shadowed_by_the_framework_facade(): void
-    {
-        Geolocate::fake();
-
-        $this->assertTrue(Geolocate::getFacadeRoot()->isFake());
-        $this->assertFalse(Geolocate::isFake());
-        $this->assertSame(
-            Facade::class,
-            (new ReflectionMethod(Geolocate::class, 'isFake'))->getDeclaringClass()->getName(),
-        );
     }
 }

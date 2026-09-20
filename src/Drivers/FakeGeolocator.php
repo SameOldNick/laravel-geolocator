@@ -4,6 +4,7 @@ namespace SameOldNick\Geolocator\Drivers;
 
 use Faker\Generator;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Testing\Fakes\Fake;
 use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
 use SameOldNick\Geolocator\DTOs\AsnResult;
 use SameOldNick\Geolocator\DTOs\CityResult;
@@ -12,7 +13,7 @@ use SameOldNick\Geolocator\DTOs\LocationResult;
 use SameOldNick\Geolocator\Support\CountryHelper;
 use SameOldNick\Geolocator\Support\IPAddressHelper;
 
-class FakeGeolocator implements GeolocatorContract
+class FakeGeolocator implements Fake, GeolocatorContract
 {
     /**
      * The faker

@@ -61,9 +61,5 @@ return [
                 ],
             ],
         ],
-
-        'fake' => [
-            'chance_of_empty' => env('GEOLOCATOR_FAKE_CHANCE_OF_EMPTY', 10), // Percentage chance of returning empty result
-        ],
     ],
 ];

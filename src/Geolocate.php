@@ -3,32 +3,10 @@
 namespace SameOldNick\Geolocator;
 
 use Illuminate\Support\Manager;
-use SameOldNick\Geolocator\Drivers\FakeGeolocator;
 use SameOldNick\Geolocator\Drivers\IPLocationDB;
 
 class Geolocate extends Manager implements Contracts\Geolocator
 {
-    /**
-     * Indicates if the fake geolocator is enabled.
-     */
-    protected bool $isFake = false;
-
-    /**
-     * Determine if the fake geolocator is enabled
-     */
-    public function isFake(): bool
-    {
-        return $this->isFake;
-    }
-
-    /**
-     * Enable or disable the fake geolocator
-     */
-    public function fake(bool $enabled = true): void
-    {
-        $this->isFake = $enabled;
-    }
-
     /**
      * Get the default driver name.
      *
@@ -36,7 +14,7 @@ class Geolocate extends Manager implements Contracts\Geolocator
      */
     public function getDefaultDriver()
     {
-        return $this->isFake ? 'fake' : $this->config->get('geolocator.driver');
+        return $this->config->get('geolocator.driver');
     }
 
     /**
@@ -47,16 +25,6 @@ class Geolocate extends Manager implements Contracts\Geolocator
     public function createIplocationdbDriver()
     {
         return new IPLocationDB\Geolocator($this->config->get('geolocator.drivers.iplocationdb', []));
-    }
-
-    /**
-     * Create a Fake driver instance.
-     *
-     * @return FakeGeolocator
-     */
-    public function createFakeDriver()
-    {
-        return new FakeGeolocator($this->config->get('geolocator.drivers.fake.chance_of_empty', 10));
     }
 
     /**

@@ -5,66 +5,51 @@ namespace SameOldNick\Geolocator\Tests\Unit;
 use SameOldNick\Geolocator\Drivers\FakeGeolocator;
 use SameOldNick\Geolocator\Drivers\IPLocationDB\Geolocator as IpLocationGeolocator;
 use SameOldNick\Geolocator\DTOs\LocationResult;
-use SameOldNick\Geolocator\Geolocate;
+use SameOldNick\Geolocator\Facades\Geolocate;
 use SameOldNick\Geolocator\Tests\TestCase;
 
+/**
+ * Driver resolution, exercised through the facade.
+ *
+ * @internal
+ */
 class GeolocateManagerTest extends TestCase
 {
     /**
-     * Test default driver respects configuration.
+     * Ensure the default driver follows the configured driver name.
      */
     public function test_default_driver_respects_config(): void
     {
         config()->set('geolocator.driver', 'iplocationdb');
+        Geolocate::forgetDrivers();
 
-        $geolocate = new Geolocate($this->app);
-
-        $this->assertSame('iplocationdb', $geolocate->getDefaultDriver());
+        $this->assertSame('iplocationdb', Geolocate::getDefaultDriver());
+        $this->assertInstanceOf(IpLocationGeolocator::class, Geolocate::driver());
     }
 
     /**
-     * Test fake toggle changes default driver.
+     * Ensure a driver registered with extend() becomes selectable by name.
      */
-    public function test_fake_toggle_changes_default_driver(): void
+    public function test_extended_drivers_are_selectable_by_name(): void
     {
-        config()->set('geolocator.driver', 'iplocationdb');
+        $driver = new FakeGeolocator(0);
 
-        $geolocate = new Geolocate($this->app);
+        Geolocate::extend('extended', fn () => $driver);
 
-        $this->assertFalse($geolocate->isFake());
-        $geolocate->fake();
-        $this->assertTrue($geolocate->isFake());
-        $this->assertSame('fake', $geolocate->getDefaultDriver());
+        config()->set('geolocator.driver', 'extended');
+        Geolocate::forgetDrivers();
 
-        $geolocate->fake(false);
-        $this->assertFalse($geolocate->isFake());
-        $this->assertSame('iplocationdb', $geolocate->getDefaultDriver());
+        $this->assertSame('extended', Geolocate::getDefaultDriver());
+        $this->assertSame($driver, Geolocate::driver());
     }
 
     /**
-     * Test driver instances are created for default drivers.
+     * Ensure lookups are delegated to the configured driver.
      */
-    public function test_driver_instances_created(): void
+    public function test_lookup_delegates_to_the_configured_driver(): void
     {
-        config()->set('geolocator.driver', 'iplocationdb');
+        $driver = new FakeGeolocator(0);
 
-        $geolocate = new Geolocate($this->app);
-        $this->assertInstanceOf(IpLocationGeolocator::class, $geolocate->driver());
-
-        $geolocate = new Geolocate($this->app);
-        $geolocate->fake();
-        $this->assertInstanceOf(FakeGeolocator::class, $geolocate->driver());
-    }
-
-    /**
-     * Test lookup delegates to the active driver.
-     */
-    public function test_lookup_delegates_to_driver(): void
-    {
-        $geolocate = new Geolocate($this->app);
-        $geolocate->fake();
-
-        $driver = $geolocate->driver('fake');
         $result = new LocationResult(
             ipAddress: '8.8.8.8',
             country: null,
@@ -74,6 +59,11 @@ class GeolocateManagerTest extends TestCase
 
         $driver->mock('8.8.8.8', $result);
 
-        $this->assertSame($result, $geolocate->lookup('8.8.8.8'));
+        Geolocate::extend('extended', fn () => $driver);
+
+        config()->set('geolocator.driver', 'extended');
+        Geolocate::forgetDrivers();
+
+        $this->assertSame($result, Geolocate::lookup('8.8.8.8'));
     }
 }

@@ -56,7 +56,6 @@ or through the environment.
 | `IPLOCATIONDB_ASN_DB_PATH_V6`     | `storage/app/geolocation/GeoLite2-ASN-IPv6.mmdb`     | ASN edition, IPv6                                            |
 | `MAXMIND_AUTO_UPDATE`             | `true`                                               | Register the update command on the schedule                  |
 | `MAXMIND_UPDATE_FREQUENCY`        | `weekly`                                             | `hourly`, `daily`, `weekly`, `monthly`, or a cron expression |
-| `GEOLOCATOR_FAKE_CHANCE_OF_EMPTY` | `10`                                                 | Percentage of empty results the fake driver returns          |
 
 The databases are GeoLite2 data redistributed by the
 [ip-location-db](https://github.com/sapics/ip-location-db) project; review that project's licensing
@@ -165,12 +164,23 @@ $driver->mock('8.8.8.8', new LocationResult(
 
 // Or mock an address that resolves to nothing.
 $driver->mock('1.1.1.1');
-
-Geolocate::fake(false); // back to the configured driver
 ```
 
-Set `GEOLOCATOR_FAKE_CHANCE_OF_EMPTY=0` when you need the fake driver to return data for every
-public address.
+By default `fake()` returns an empty result for 10% of public addresses, which is what makes the fake
+non-deterministic. Pass a different percentage, or `0` when you need real data for every public
+address:
+
+```php
+Geolocate::fake(0);
+```
+
+The fake stays installed for the rest of the test, which is usually what you want since every test
+gets a fresh container. To hand the facade back to the configured driver mid-test, swap its real root
+back in:
+
+```php
+Geolocate::swap(app(\SameOldNick\Geolocator\Geolocate::class));
+```
 
 ### Writing a custom driver
 
