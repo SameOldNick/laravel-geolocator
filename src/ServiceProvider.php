@@ -24,6 +24,9 @@ class ServiceProvider extends BaseServiceProvider
 
         $this->app->alias(GeolocatorManager::class, 'geolocator');
         $this->app->alias(GeolocatorManager::class, Geolocator::class);
+
+        // Merge the package configuration so that the default driver is set, but allow the user to override it in their own config.
+        $this->mergeConfigFrom(__DIR__.'/../config/geolocator.php', 'geolocator');
     }
 
     /**
