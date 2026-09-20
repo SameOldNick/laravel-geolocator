@@ -153,12 +153,10 @@ use SameOldNick\Geolocator\DTOs\AsnResult;
 use SameOldNick\Geolocator\DTOs\LocationResult;
 use SameOldNick\Geolocator\Facades\Geolocator;
 
-Geolocator::fake();
+/** @var FakeGeolocator $driver */
+$driver = Geolocator::fake();
 
 Geolocator::lookup('8.8.8.8'); // random result, no database access
-
-/** @var FakeGeolocator $driver */
-$driver = Geolocator::driver();
 
 // Return a specific result for an address.
 $driver->mock('8.8.8.8', new LocationResult(
@@ -258,6 +256,10 @@ Testbench, and `composer serve` starts the workbench demo application.
 Test doubles live in `tests/Fixtures`: `RecordingGeolocator` records the calls a driver receives,
 and `ScriptedUpdater` scripts the outcome of each download. Real MaxMind databases are not committed,
 so the ip-location-db driver is covered through its path selection and its failure mode.
+
+The examples in this file are covered by `tests/Feature/ReadmeExamplesTest.php`, and the reference
+tables and manifest claims above by `tests/Unit/ReadmeReferenceTest.php`, so the documentation cannot
+drift from the code.
 
 Static analysis runs with `vendor/bin/phpstan analyse src --memory-limit=1G`. The `composer analyse`
 and `composer lint` scripts currently fail, because `phpstan.neon` lists a `routes` path this package
