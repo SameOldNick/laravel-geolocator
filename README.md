@@ -32,7 +32,7 @@ php artisan vendor:publish --tag=geolocator-config
 Download the MaxMind databases:
 
 ```bash
-php artisan geolocation:update-iplocationdb
+php artisan geolocator:update-iplocationdb
 ```
 
 The package does not ship the databases. The command downloads the country, city and ASN editions
@@ -78,23 +78,29 @@ and attribution terms before redistributing the files yourself.
 ### Resolving the geolocator
 
 ```php
-use SameOldNick\Geolocator\Contracts\Geolocator;
-use SameOldNick\Geolocator\Facades\Geolocate;
+use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
+use SameOldNick\Geolocator\Facades\Geolocator;
 
-Geolocate::lookup('8.8.8.8');              // facade
-app(Geolocator::class)->lookup('8.8.8.8'); // contract
-app('geolocate')->lookup('8.8.8.8');       // container alias
+Geolocator::lookup('8.8.8.8');                     // facade
+app(GeolocatorContract::class)->lookup('8.8.8.8'); // contract
+app('geolocator')->lookup('8.8.8.8');              // container alias
 ```
 
-All three resolve the same manager instance.
+All three resolve the same manager instance. The contract is imported under an `as` alias because the
+facade and the contract share their short name. The package also registers a global `Geolocator`
+facade alias through `extra.laravel.aliases`, so the shortest entry point needs no import:
+
+```php
+\Geolocator::lookup('8.8.8.8');
+```
 
 ### Looking up an address
 
 ```php
-$location = Geolocate::lookup('8.8.8.8');        // country, city and ASN
-$country = Geolocate::lookupCountry('8.8.8.8');  // country only
-$city = Geolocate::lookupCity('8.8.8.8');        // city only
-$asn = Geolocate::lookupAsn('8.8.8.8');          // ASN only
+$location = Geolocator::lookup('8.8.8.8');        // country, city and ASN
+$country = Geolocator::lookupCountry('8.8.8.8');  // country only
+$city = Geolocator::lookupCity('8.8.8.8');        // city only
+$asn = Geolocator::lookupAsn('8.8.8.8');          // ASN only
 ```
 
 Each returns a `LocationResult`, with the editions you did not ask for left as `null`:
@@ -117,8 +123,8 @@ $location->toArray();
 Private, reserved and unparseable addresses return no records, so the result is empty:
 
 ```php
-Geolocate::lookup('192.168.1.1')->hasResults(); // false
-(string) Geolocate::lookup('192.168.1.1');      // 'Unknown Location'
+Geolocator::lookup('192.168.1.1')->hasResults(); // false
+(string) Geolocator::lookup('192.168.1.1');      // 'Unknown Location'
 ```
 
 ### Resolving the current request
@@ -145,14 +151,14 @@ Pass your own default with `$request->geolocate('127.0.0.1')`.
 use SameOldNick\Geolocator\Drivers\FakeGeolocator;
 use SameOldNick\Geolocator\DTOs\AsnResult;
 use SameOldNick\Geolocator\DTOs\LocationResult;
-use SameOldNick\Geolocator\Facades\Geolocate;
+use SameOldNick\Geolocator\Facades\Geolocator;
 
-Geolocate::fake();
+Geolocator::fake();
 
-Geolocate::lookup('8.8.8.8'); // random result, no database access
+Geolocator::lookup('8.8.8.8'); // random result, no database access
 
 /** @var FakeGeolocator $driver */
-$driver = Geolocate::driver();
+$driver = Geolocator::driver();
 
 // Return a specific result for an address.
 $driver->mock('8.8.8.8', new LocationResult(
@@ -171,7 +177,7 @@ non-deterministic. Pass a different percentage, or `0` when you need real data f
 address:
 
 ```php
-Geolocate::fake(0);
+Geolocator::fake(0);
 ```
 
 The fake stays installed for the rest of the test, which is usually what you want since every test
@@ -179,7 +185,7 @@ gets a fresh container. To hand the facade back to the configured driver mid-tes
 back in:
 
 ```php
-Geolocate::swap(app(\SameOldNick\Geolocator\Geolocate::class));
+Geolocator::swap(app(\SameOldNick\Geolocator\GeolocatorManager::class));
 ```
 
 ### Writing a custom driver
@@ -187,11 +193,11 @@ Geolocate::swap(app(\SameOldNick\Geolocator\Geolocate::class));
 Implement `SameOldNick\Geolocator\Contracts\Geolocator` and register it with `extend()`:
 
 ```php
-use SameOldNick\Geolocator\Contracts\Geolocator;
+use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
 use SameOldNick\Geolocator\DTOs\LocationResult;
-use SameOldNick\Geolocator\Facades\Geolocate;
+use SameOldNick\Geolocator\Facades\Geolocator;
 
-class MyGeolocator implements Geolocator
+class MyGeolocator implements GeolocatorContract
 {
     public function lookup(string $ip): LocationResult { /* ... */ }
 
@@ -202,7 +208,7 @@ class MyGeolocator implements Geolocator
     public function lookupAsn(string $ip): LocationResult { /* ... */ }
 }
 
-Geolocate::extend('my-driver', fn ($app) => new MyGeolocator());
+Geolocator::extend('my-driver', fn ($app) => new MyGeolocator());
 ```
 
 Select it with `GEOLOCATOR_DRIVER=my-driver`, or by setting `geolocator.driver` in the config file.
@@ -214,8 +220,8 @@ container is not consulted, so a container binding alone will not register a dri
 ### Keeping the databases up to date
 
 ```bash
-php artisan geolocation:update-iplocationdb       # update now
-php artisan geolocation:update-iplocationdb -v    # log each step, with context
+php artisan geolocator:update-iplocationdb       # update now
+php artisan geolocator:update-iplocationdb -v    # log each step, with context
 ```
 
 Downloads are retried across every URL configured for an edition. While `MAXMIND_AUTO_UPDATE` is
@@ -243,7 +249,7 @@ composer test             # Pest test suite
 composer test-coverage    # the same, with coverage
 composer format           # Pint code style
 
-vendor/bin/pest tests/Feature/GeolocateTest.php   # a single file
+vendor/bin/pest tests/Feature/GeolocatorTest.php   # a single file
 ```
 
 The runner is Pest, but the tests are plain PHPUnit classes. `tests/TestCase.php` boots Orchestra
