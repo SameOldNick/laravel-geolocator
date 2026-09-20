@@ -233,6 +233,9 @@ default) and runs `withoutOverlapping()`.
 Each file update also reports progress through the optional callback passed to
 `Updater::update(callable $callback)`.
 
+The package emits these events but sends no notifications itself — register a listener to notify
+whatever your application uses (mail, Slack, database notifications).
+
 ## Testing
 
 ```bash
