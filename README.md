@@ -240,6 +240,23 @@ Each file update also reports progress through the optional callback passed to
 The package emits these events but sends no notifications itself — register a listener to notify
 whatever your application uses (mail, Slack, database notifications).
 
+## AI Guidelines
+
+The package ships a [Laravel Boost](https://laravel.com/docs/boost) guideline at
+`resources/boost/guidelines/core.blade.php`. When a Boost user runs `php artisan boost:install`, or
+`php artisan boost:update --discover` after installing this package, the guideline is merged into
+their agent's context. It covers the parts that are easy to get wrong: a missing database throwing
+instead of returning an empty result, the aliasing needed when importing the facade and the contract
+together, the `geolocate` request macro, and why `X-Forwarded-For` must not be parsed by hand.
+
+Nothing depends on Boost in either direction: discovery is by convention from
+`vendor/sameoldnick/laravel-geolocator/resources/boost`, so the guideline costs users who do not use
+Boost nothing at all. `tests/Feature/BoostGuidelineTest.php` renders it, because Boost silently skips
+a guideline that fails to render as Blade, and asserts it is not stripped by `.gitattributes`.
+
+There is no agent skill to go with it. The package has no multi-step authoring workflow for an agent
+to improvise — setup is a one-time console task — so a guideline is enough.
+
 ## Testing
 
 ```bash
