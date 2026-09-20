@@ -3,20 +3,64 @@
 namespace SameOldNick\Geolocator\Tests\Feature;
 
 use Illuminate\Console\Scheduling\Schedule;
+use Orchestra\Testbench\Concerns\WithWorkbench;
+use Orchestra\Testbench\TestCase as Orchestra;
 use PHPUnit\Framework\Attributes\DataProvider;
-use SameOldNick\Geolocator\Tests\TestCase;
 
 /**
+ * The console kernel resolves the scheduler while the application boots, so these tests extend
+ * Testbench directly: they need no database, and unlike the package TestCase they can safely
+ * reboot the application (see scheduleWith()).
+ *
  * @internal
  */
-class ScheduleAutoUpdateTest extends TestCase
+class ScheduleAutoUpdateTest extends Orchestra
 {
+    use WithWorkbench;
+
     /**
-     * Resolve the scheduler, which triggers the package's after-resolving hook.
+     * Configuration to apply while the test application is created.
+     *
+     * @var array<string, mixed>
      */
-    protected function schedule(): Schedule
+    protected static array $config = [];
+
+    /**
+     * Apply the pending configuration as the application is created.
+     *
+     * The scheduler is resolved during boot, which fires the package's after-resolving hook before a
+     * test body can set any configuration. Applying it here keeps the assertions deterministic no
+     * matter whether an earlier test has already booted the console kernel.
+     */
+    protected function defineEnvironment($app)
     {
+        foreach (static::$config as $key => $value) {
+            $app['config']->set($key, $value);
+        }
+    }
+
+    /**
+     * Reboot the application with the given configuration and resolve the scheduler.
+     *
+     * @param  array<string, mixed>  $config
+     */
+    protected function scheduleWith(array $config = []): Schedule
+    {
+        static::$config = $config;
+
+        $this->refreshApplication();
+
         return $this->app->make(Schedule::class);
+    }
+
+    /**
+     * Clear the pending configuration so it cannot leak into another test.
+     */
+    protected function tearDown(): void
+    {
+        static::$config = [];
+
+        parent::tearDown();
     }
 
     /**
@@ -24,7 +68,7 @@ class ScheduleAutoUpdateTest extends TestCase
      */
     public function test_update_command_is_scheduled_by_default(): void
     {
-        $events = $this->schedule()->events();
+        $events = $this->scheduleWith()->events();
 
         $this->assertCount(1, $events);
         $this->assertStringContainsString('geolocation:update-iplocationdb', $events[0]->command);
@@ -38,9 +82,11 @@ class ScheduleAutoUpdateTest extends TestCase
      */
     public function test_nothing_is_scheduled_when_auto_update_is_disabled(): void
     {
-        config()->set('geolocator.drivers.iplocationdb.update.auto_update.enabled', false);
+        $events = $this->scheduleWith([
+            'geolocator.drivers.iplocationdb.update.auto_update.enabled' => false,
+        ])->events();
 
-        $this->assertCount(0, $this->schedule()->events());
+        $this->assertCount(0, $events);
     }
 
     /**
@@ -48,9 +94,11 @@ class ScheduleAutoUpdateTest extends TestCase
      */
     public function test_nothing_is_scheduled_when_configuration_is_missing(): void
     {
-        config()->set('geolocator.drivers.iplocationdb.update.auto_update', []);
+        $events = $this->scheduleWith([
+            'geolocator.drivers.iplocationdb.update.auto_update' => [],
+        ])->events();
 
-        $this->assertCount(0, $this->schedule()->events());
+        $this->assertCount(0, $events);
     }
 
     /**
@@ -58,10 +106,12 @@ class ScheduleAutoUpdateTest extends TestCase
      */
     public function test_nothing_is_scheduled_when_frequency_is_empty(): void
     {
-        config()->set('geolocator.drivers.iplocationdb.update.auto_update.enabled', true);
-        config()->set('geolocator.drivers.iplocationdb.update.auto_update.frequency', '');
+        $events = $this->scheduleWith([
+            'geolocator.drivers.iplocationdb.update.auto_update.enabled' => true,
+            'geolocator.drivers.iplocationdb.update.auto_update.frequency' => '',
+        ])->events();
 
-        $this->assertCount(0, $this->schedule()->events());
+        $this->assertCount(0, $events);
     }
 
     /**
@@ -70,10 +120,10 @@ class ScheduleAutoUpdateTest extends TestCase
     #[DataProvider('frequencyProvider')]
     public function test_frequency_maps_to_cron_expression(string $frequency, string $expression): void
     {
-        config()->set('geolocator.drivers.iplocationdb.update.auto_update.enabled', true);
-        config()->set('geolocator.drivers.iplocationdb.update.auto_update.frequency', $frequency);
-
-        $events = $this->schedule()->events();
+        $events = $this->scheduleWith([
+            'geolocator.drivers.iplocationdb.update.auto_update.enabled' => true,
+            'geolocator.drivers.iplocationdb.update.auto_update.frequency' => $frequency,
+        ])->events();
 
         $this->assertCount(1, $events);
         $this->assertSame($expression, $events[0]->expression);

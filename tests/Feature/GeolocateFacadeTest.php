@@ -9,6 +9,7 @@ use SameOldNick\Geolocator\Drivers\FakeGeolocator;
 use SameOldNick\Geolocator\DTOs\LocationResult;
 use SameOldNick\Geolocator\Facades\Geolocate;
 use SameOldNick\Geolocator\Geolocate as GeolocateManager;
+use SameOldNick\Geolocator\Tests\Fixtures\RecordingGeolocator;
 use SameOldNick\Geolocator\Tests\TestCase;
 
 /**
@@ -86,6 +87,27 @@ class GeolocateFacadeTest extends TestCase
         Geolocate::fake(false);
 
         $this->assertFalse(Geolocate::getFacadeRoot()->isFake());
+    }
+
+    /**
+     * Ensure a custom driver registered through the facade can be selected by name.
+     */
+    public function test_a_custom_driver_can_be_registered_through_the_facade(): void
+    {
+        $result = new LocationResult(
+            ipAddress: '8.8.8.8',
+            country: null,
+            city: null,
+            asn: null,
+        );
+
+        Geolocate::extend('custom', fn () => new RecordingGeolocator($result));
+
+        config()->set('geolocator.driver', 'custom');
+
+        Geolocate::forgetDrivers();
+
+        $this->assertSame($result, Geolocate::lookup('8.8.8.8'));
     }
 
     /**
