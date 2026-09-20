@@ -2,6 +2,7 @@
 
 [![Tests](https://github.com/SameOldNick/laravel-geolocator/actions/workflows/tests.yml/badge.svg)](https://github.com/SameOldNick/laravel-geolocator/actions/workflows/tests.yml)
 [![codecov](https://codecov.io/gh/SameOldNick/laravel-geolocator/graph/badge.svg?token=eU4BR7v2Cm)](https://codecov.io/gh/SameOldNick/laravel-geolocator)
+
 An offline IP geolocation package for Laravel, backed by MaxMind databases. Look up the country, city
 and ASN behind an IP address, resolve the location of the current request, and keep the databases up
 to date with a scheduled Artisan command.
