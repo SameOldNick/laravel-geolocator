@@ -5,7 +5,7 @@ namespace SameOldNick\Geolocator\Tests\Feature;
 use InvalidArgumentException;
 use ReflectionMethod;
 use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
-use SameOldNick\Geolocator\Facades\Geolocate;
+use SameOldNick\Geolocator\Facades\Geolocator;
 use SameOldNick\Geolocator\Tests\TestCase;
 
 /**
@@ -24,9 +24,9 @@ class IPLocationDBGeolocatorTest extends TestCase
     protected function driverFor(array $paths): GeolocatorContract
     {
         config()->set('geolocator.drivers.iplocationdb.editions', ['country' => $paths]);
-        Geolocate::forgetDrivers();
+        Geolocator::forgetDrivers();
 
-        return Geolocate::driver('iplocationdb');
+        return Geolocator::driver('iplocationdb');
     }
 
     /**
@@ -72,6 +72,6 @@ class IPLocationDBGeolocatorTest extends TestCase
 
         $this->expectException(InvalidArgumentException::class);
 
-        Geolocate::lookupCountry('8.8.8.8');
+        Geolocator::lookupCountry('8.8.8.8');
     }
 }

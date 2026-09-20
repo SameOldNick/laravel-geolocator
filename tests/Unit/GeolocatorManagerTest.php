@@ -5,7 +5,7 @@ namespace SameOldNick\Geolocator\Tests\Unit;
 use SameOldNick\Geolocator\Drivers\FakeGeolocator;
 use SameOldNick\Geolocator\Drivers\IPLocationDB\Geolocator as IpLocationGeolocator;
 use SameOldNick\Geolocator\DTOs\LocationResult;
-use SameOldNick\Geolocator\Facades\Geolocate;
+use SameOldNick\Geolocator\Facades\Geolocator;
 use SameOldNick\Geolocator\Tests\TestCase;
 
 /**
@@ -13,7 +13,7 @@ use SameOldNick\Geolocator\Tests\TestCase;
  *
  * @internal
  */
-class GeolocateManagerTest extends TestCase
+class GeolocatorManagerTest extends TestCase
 {
     /**
      * Ensure the default driver follows the configured driver name.
@@ -21,10 +21,10 @@ class GeolocateManagerTest extends TestCase
     public function test_default_driver_respects_config(): void
     {
         config()->set('geolocator.driver', 'iplocationdb');
-        Geolocate::forgetDrivers();
+        Geolocator::forgetDrivers();
 
-        $this->assertSame('iplocationdb', Geolocate::getDefaultDriver());
-        $this->assertInstanceOf(IpLocationGeolocator::class, Geolocate::driver());
+        $this->assertSame('iplocationdb', Geolocator::getDefaultDriver());
+        $this->assertInstanceOf(IpLocationGeolocator::class, Geolocator::driver());
     }
 
     /**
@@ -34,13 +34,13 @@ class GeolocateManagerTest extends TestCase
     {
         $driver = new FakeGeolocator(0);
 
-        Geolocate::extend('extended', fn () => $driver);
+        Geolocator::extend('extended', fn () => $driver);
 
         config()->set('geolocator.driver', 'extended');
-        Geolocate::forgetDrivers();
+        Geolocator::forgetDrivers();
 
-        $this->assertSame('extended', Geolocate::getDefaultDriver());
-        $this->assertSame($driver, Geolocate::driver());
+        $this->assertSame('extended', Geolocator::getDefaultDriver());
+        $this->assertSame($driver, Geolocator::driver());
     }
 
     /**
@@ -59,11 +59,11 @@ class GeolocateManagerTest extends TestCase
 
         $driver->mock('8.8.8.8', $result);
 
-        Geolocate::extend('extended', fn () => $driver);
+        Geolocator::extend('extended', fn () => $driver);
 
         config()->set('geolocator.driver', 'extended');
-        Geolocate::forgetDrivers();
+        Geolocator::forgetDrivers();
 
-        $this->assertSame($result, Geolocate::lookup('8.8.8.8'));
+        $this->assertSame($result, Geolocator::lookup('8.8.8.8'));
     }
 }

@@ -21,7 +21,7 @@ class UpdateIPLocationDBCommandTest extends TestCase
      */
     public function test_command_is_registered(): void
     {
-        $command = Artisan::all()['geolocation:update-iplocationdb'] ?? null;
+        $command = Artisan::all()['geolocator:update-iplocationdb'] ?? null;
 
         $this->assertInstanceOf(UpdateIPLocationDB::class, $command);
         $this->assertSame('Update IP Location DB geolocation databases', $command->getDescription());
@@ -49,7 +49,7 @@ class UpdateIPLocationDBCommandTest extends TestCase
 
         $this->instance(Updater::class, new ScriptedUpdater([true, true]));
 
-        $this->artisan('geolocation:update-iplocationdb')
+        $this->artisan('geolocator:update-iplocationdb')
             ->expectsOutputToContain('Starting IP Location DB update...')
             ->expectsOutputToContain('IP Location DB update completed successfully.')
             ->assertSuccessful();
@@ -88,7 +88,7 @@ class UpdateIPLocationDBCommandTest extends TestCase
         $this->instance(Updater::class, new ScriptedUpdater([false, false]));
 
         // Each failed edition is reported on the console as well as through its event.
-        $this->artisan('geolocation:update-iplocationdb')
+        $this->artisan('geolocator:update-iplocationdb')
             ->expectsOutputToContain('Failed to update country database (ipv4).')
             ->expectsOutputToContain('Failed to update country database (ipv6).')
             ->expectsOutputToContain('IP Location DB update completed with some failures.')
@@ -132,7 +132,7 @@ class UpdateIPLocationDBCommandTest extends TestCase
 
         $this->instance(Updater::class, new ScriptedUpdater([false, false]));
 
-        $this->artisan('geolocation:update-iplocationdb', ['--verbose' => true])
+        $this->artisan('geolocator:update-iplocationdb', ['--verbose' => true])
             ->expectsOutputToContain('Failed to update country database (ipv4).')
             ->expectsOutputToContain('localPath')
             ->assertSuccessful();
@@ -160,7 +160,7 @@ class UpdateIPLocationDBCommandTest extends TestCase
 
         $this->instance(Updater::class, new ScriptedUpdater([true, true]));
 
-        $this->artisan('geolocation:update-iplocationdb', ['--verbose' => true])
+        $this->artisan('geolocator:update-iplocationdb', ['--verbose' => true])
             ->expectsOutputToContain('localPath')
             ->assertSuccessful();
     }

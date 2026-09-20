@@ -5,7 +5,7 @@ namespace SameOldNick\Geolocator;
 use Illuminate\Support\Manager;
 use SameOldNick\Geolocator\Drivers\IPLocationDB;
 
-class Geolocate extends Manager implements Contracts\Geolocator
+class GeolocatorManager extends Manager implements Contracts\Geolocator
 {
     /**
      * Get the default driver name.

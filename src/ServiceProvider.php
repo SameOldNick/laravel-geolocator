@@ -18,12 +18,12 @@ class ServiceProvider extends BaseServiceProvider
      */
     public function register()
     {
-        $this->app->singleton(Geolocate::class, function ($app) {
-            return new Geolocate($app);
+        $this->app->singleton(GeolocatorManager::class, function ($app) {
+            return new GeolocatorManager($app);
         });
 
-        $this->app->alias(Geolocate::class, 'geolocate');
-        $this->app->alias(Geolocate::class, Geolocator::class);
+        $this->app->alias(GeolocatorManager::class, 'geolocator');
+        $this->app->alias(GeolocatorManager::class, Geolocator::class);
     }
 
     /**
@@ -77,7 +77,7 @@ class ServiceProvider extends BaseServiceProvider
     protected function registerMacros(): void
     {
         Request::macro('geolocate', function ($default = '0.0.0.0') {
-            $geolocate = app(Geolocate::class);
+            $geolocator = app(GeolocatorManager::class);
 
             // Determine the client IP address, ignoring private/internal IPs
             $ip = Arr::first($this->getClientIps(), function ($ip) {
@@ -85,7 +85,7 @@ class ServiceProvider extends BaseServiceProvider
                 return is_string($ip) && ! IPAddressHelper::isPrivateIPAddress($ip);
             }, $this->ip());
 
-            return $geolocate->lookup($ip ?? $default);
+            return $geolocator->lookup($ip ?? $default);
         });
     }
 }

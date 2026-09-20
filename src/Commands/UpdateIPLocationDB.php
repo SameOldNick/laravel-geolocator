@@ -16,7 +16,7 @@ class UpdateIPLocationDB extends Command
      *
      * @var string
      */
-    protected $signature = 'geolocation:update-iplocationdb
+    protected $signature = 'geolocator:update-iplocationdb
                             {--verbose|v : Enable verbose output during the update process}';
 
     /**

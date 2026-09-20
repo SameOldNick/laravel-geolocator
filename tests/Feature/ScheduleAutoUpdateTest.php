@@ -71,7 +71,7 @@ class ScheduleAutoUpdateTest extends Orchestra
         $events = $this->scheduleWith()->events();
 
         $this->assertCount(1, $events);
-        $this->assertStringContainsString('geolocation:update-iplocationdb', $events[0]->command);
+        $this->assertStringContainsString('geolocator:update-iplocationdb', $events[0]->command);
         $this->assertSame('0 0 * * 0', $events[0]->expression);
         $this->assertSame('Update IPLocationDB geolocation databases', $events[0]->description);
         $this->assertTrue($events[0]->withoutOverlapping);

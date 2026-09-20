@@ -7,20 +7,20 @@ use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
 use SameOldNick\Geolocator\Drivers\FakeGeolocator;
 
 /**
- * Geolocate Facade
+ * Geolocator Facade
  *
  * @method static \SameOldNick\Geolocator\DTOs\LocationResult lookup(string $ip)
  * @method static \SameOldNick\Geolocator\DTOs\LocationResult lookupCountry(string $ip)
  * @method static \SameOldNick\Geolocator\DTOs\LocationResult lookupCity(string $ip)
  * @method static \SameOldNick\Geolocator\DTOs\LocationResult lookupAsn(string $ip)
  * @method static \SameOldNick\Geolocator\Contracts\Geolocator driver(string|null $driver = null)
- * @method static \SameOldNick\Geolocator\Geolocate extend(string $driver, \Closure $callback)
- * @method static \SameOldNick\Geolocator\Geolocate forgetDrivers()
+ * @method static \SameOldNick\Geolocator\GeolocatorManager extend(string $driver, \Closure $callback)
+ * @method static \SameOldNick\Geolocator\GeolocatorManager forgetDrivers()
  * @method static string|null getDefaultDriver()
  *
- * @see Geolocator
+ * @see GeolocatorContract
  */
-class Geolocate extends Facade
+class Geolocator extends Facade
 {
     /**
      * {@inheritDoc}

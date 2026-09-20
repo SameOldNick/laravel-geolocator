@@ -8,8 +8,8 @@ use ReflectionProperty;
 use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
 use SameOldNick\Geolocator\Drivers\IPLocationDB\Geolocator as IpLocationDbGeolocator;
 use SameOldNick\Geolocator\DTOs\LocationResult;
-use SameOldNick\Geolocator\Facades\Geolocate;
-use SameOldNick\Geolocator\Geolocate as GeolocateManager;
+use SameOldNick\Geolocator\Facades\Geolocator;
+use SameOldNick\Geolocator\GeolocatorManager;
 use SameOldNick\Geolocator\Tests\Fixtures\RecordingGeolocator;
 use SameOldNick\Geolocator\Tests\TestCase;
 
@@ -18,7 +18,7 @@ use SameOldNick\Geolocator\Tests\TestCase;
  *
  * @internal
  */
-class GeolocateTest extends TestCase
+class GeolocatorTest extends TestCase
 {
     /**
      * The IP address used by the delegation tests.
@@ -42,10 +42,10 @@ class GeolocateTest extends TestCase
     {
         $recorder = new RecordingGeolocator($this->cannedResult());
 
-        Geolocate::extend('recording', fn () => $recorder);
+        Geolocator::extend('recording', fn () => $recorder);
 
         config()->set('geolocator.driver', 'recording');
-        Geolocate::forgetDrivers();
+        Geolocator::forgetDrivers();
 
         return $recorder;
     }
@@ -68,11 +68,11 @@ class GeolocateTest extends TestCase
      */
     public function test_facade_and_container_aliases_share_the_manager(): void
     {
-        $manager = $this->app->make(GeolocateManager::class);
+        $manager = $this->app->make(GeolocatorManager::class);
 
-        $this->assertSame($manager, $this->app->make('geolocate'));
+        $this->assertSame($manager, $this->app->make('geolocator'));
         $this->assertSame($manager, $this->app->make(GeolocatorContract::class));
-        $this->assertSame($manager, Geolocate::getFacadeRoot());
+        $this->assertSame($manager, Geolocator::getFacadeRoot());
     }
 
     /**
@@ -81,10 +81,10 @@ class GeolocateTest extends TestCase
     public function test_default_driver_comes_from_config(): void
     {
         config()->set('geolocator.driver', 'iplocationdb');
-        Geolocate::forgetDrivers();
+        Geolocator::forgetDrivers();
 
-        $this->assertSame('iplocationdb', Geolocate::getDefaultDriver());
-        $this->assertInstanceOf(IpLocationDbGeolocator::class, Geolocate::driver());
+        $this->assertSame('iplocationdb', Geolocator::getDefaultDriver());
+        $this->assertInstanceOf(IpLocationDbGeolocator::class, Geolocator::driver());
     }
 
     /**
@@ -94,8 +94,8 @@ class GeolocateTest extends TestCase
     {
         $recorder = $this->useRecordingDriver();
 
-        $this->assertSame('recording', Geolocate::getDefaultDriver());
-        $this->assertSame($recorder, Geolocate::driver());
+        $this->assertSame('recording', Geolocator::getDefaultDriver());
+        $this->assertSame($recorder, Geolocator::driver());
     }
 
     /**
@@ -105,10 +105,10 @@ class GeolocateTest extends TestCase
     {
         $recorder = $this->useRecordingDriver();
 
-        $this->assertSame($recorder->result, Geolocate::lookup(self::PUBLIC_IP));
-        $this->assertSame($recorder->result, Geolocate::lookupCountry(self::PUBLIC_IP));
-        $this->assertSame($recorder->result, Geolocate::lookupCity(self::PUBLIC_IP));
-        $this->assertSame($recorder->result, Geolocate::lookupAsn(self::PUBLIC_IP));
+        $this->assertSame($recorder->result, Geolocator::lookup(self::PUBLIC_IP));
+        $this->assertSame($recorder->result, Geolocator::lookupCountry(self::PUBLIC_IP));
+        $this->assertSame($recorder->result, Geolocator::lookupCity(self::PUBLIC_IP));
+        $this->assertSame($recorder->result, Geolocator::lookupAsn(self::PUBLIC_IP));
 
         $this->assertSame([
             ['method' => 'lookup', 'ip' => self::PUBLIC_IP],
@@ -123,7 +123,7 @@ class GeolocateTest extends TestCase
      */
     public function test_driver_instances_are_cached_per_name(): void
     {
-        $this->assertSame(Geolocate::driver('iplocationdb'), Geolocate::driver('iplocationdb'));
+        $this->assertSame(Geolocator::driver('iplocationdb'), Geolocator::driver('iplocationdb'));
     }
 
     /**
@@ -133,9 +133,9 @@ class GeolocateTest extends TestCase
     {
         $path = storage_path('app/geolocation/custom-country.mmdb');
         config()->set('geolocator.drivers.iplocationdb.editions.country.ipv4', $path);
-        Geolocate::forgetDrivers();
+        Geolocator::forgetDrivers();
 
-        $driver = Geolocate::driver('iplocationdb');
+        $driver = Geolocator::driver('iplocationdb');
         $this->assertInstanceOf(IpLocationDbGeolocator::class, $driver);
 
         $config = (new ReflectionProperty(IpLocationDbGeolocator::class, 'config'))->getValue($driver);
@@ -149,12 +149,12 @@ class GeolocateTest extends TestCase
     public function test_an_unsupported_driver_name_fails(): void
     {
         config()->set('geolocator.driver', 'redis');
-        Geolocate::forgetDrivers();
+        Geolocator::forgetDrivers();
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('redis');
 
-        Geolocate::lookup(self::PUBLIC_IP);
+        Geolocator::lookup(self::PUBLIC_IP);
     }
 
     /**
@@ -163,11 +163,11 @@ class GeolocateTest extends TestCase
     public function test_a_missing_driver_configuration_fails(): void
     {
         config()->set('geolocator.driver', null);
-        Geolocate::forgetDrivers();
+        Geolocator::forgetDrivers();
 
         $this->expectException(InvalidArgumentException::class);
 
-        Geolocate::lookup(self::PUBLIC_IP);
+        Geolocator::lookup(self::PUBLIC_IP);
     }
 
     /**
@@ -266,13 +266,13 @@ class GeolocateTest extends TestCase
     {
         $recorder = $this->useRecordingDriver();
 
-        Geolocate::fake();
+        Geolocator::fake();
 
         $request = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => self::PUBLIC_IP]);
 
         $this->assertSame($recorder->result, $request->geolocate());
         $this->assertSame([['method' => 'lookup', 'ip' => self::PUBLIC_IP]], $recorder->calls);
 
-        $this->assertNotSame($recorder->result, Geolocate::lookup(self::PUBLIC_IP));
+        $this->assertNotSame($recorder->result, Geolocator::lookup(self::PUBLIC_IP));
     }
 }
