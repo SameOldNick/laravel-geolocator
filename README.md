@@ -252,36 +252,12 @@ together, the `geolocate` request macro, and why `X-Forwarded-For` must not be p
 
 Nothing depends on Boost in either direction: discovery is by convention from
 `vendor/sameoldnick/laravel-geolocator/resources/boost`, so the guideline costs users who do not use
-Boost nothing at all. `tests/Feature/BoostGuidelineTest.php` renders it, because Boost silently skips
-a guideline that fails to render as Blade, and asserts it is not stripped by `.gitattributes`.
+Boost nothing at all. Boost renders a guideline as Blade and silently skips one that fails to render,
+so its snippets are kept inside `@verbatim` — see [CONTRIBUTING.md](CONTRIBUTING.md) for how to
+re-render it after editing.
 
 There is no agent skill to go with it. The package has no multi-step authoring workflow for an agent
 to improvise — setup is a one-time console task — so a guideline is enough.
-
-## Testing
-
-```bash
-composer test             # Pest test suite
-composer test-coverage    # the same, with coverage
-composer format           # Pint code style
-
-vendor/bin/pest tests/Feature/GeolocatorTest.php   # a single file
-```
-
-The runner is Pest, but the tests are plain PHPUnit classes. `tests/TestCase.php` boots Orchestra
-Testbench, and `composer serve` starts the workbench demo application.
-
-Test doubles live in `tests/Fixtures`: `RecordingGeolocator` records the calls a driver receives,
-and `ScriptedUpdater` scripts the outcome of each download. Real MaxMind databases are not committed,
-so the ip-location-db driver is covered through its path selection and its failure mode.
-
-The examples in this file are covered by `tests/Feature/ReadmeExamplesTest.php`, and the reference
-tables and manifest claims above by `tests/Unit/ReadmeReferenceTest.php`, so the documentation cannot
-drift from the code.
-
-Static analysis runs with `vendor/bin/phpstan analyse src --memory-limit=1G`. The `composer analyse`
-and `composer lint` scripts currently fail, because `phpstan.neon` lists a `routes` path this package
-does not have and the default 128M memory limit is too low for level 7.
 
 ## Changelog
 
@@ -296,6 +272,9 @@ Pull requests are welcome. Please keep the suite green and the code style applie
 composer test      # the test suite
 composer format    # the code style
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development environment, the full set of checks, the
+test layout and the documentation rules.
 
 ## Security
 
