@@ -7,6 +7,28 @@ An offline IP geolocation package for Laravel, backed by MaxMind databases. Look
 and ASN behind an IP address, resolve the location of the current request, and keep the databases up
 to date with a scheduled Artisan command.
 
+## Table of contents
+
+- [Requirements](#requirements)
+- [Installation](#installation)
+  - [Configuration](#configuration)
+  - [Deployment notes](#deployment-notes)
+- [Usage](#usage)
+  - [Quick start](#quick-start)
+  - [Resolving the geolocator](#resolving-the-geolocator)
+  - [Looking up an address](#looking-up-an-address)
+  - [When a lookup throws](#when-a-lookup-throws)
+  - [Resolving the current request](#resolving-the-current-request)
+  - [Faking lookups in your tests](#faking-lookups-in-your-tests)
+  - [Writing a custom driver](#writing-a-custom-driver)
+  - [Keeping the databases up to date](#keeping-the-databases-up-to-date)
+  - [Events](#events)
+- [AI Guidelines](#ai-guidelines)
+- [Changelog](#changelog)
+- [Contributing](#contributing)
+- [Security](#security)
+- [License](#license)
+
 ## Requirements
 
 - PHP 8.4 or newer
@@ -76,6 +98,40 @@ and attribution terms before redistributing the files yourself.
 
 ## Usage
 
+### Quick start
+
+Once the databases are in place, the shortest working path is a route that resolves the caller:
+
+```php
+use Illuminate\Http\Request;
+
+Route::get('/where-am-i', function (Request $request) {
+    $location = $request->geolocate();
+
+    return [
+        'ip' => $location->ipAddress,
+        'country' => $location->country?->countryCode,
+        'city' => $location->city?->city,
+        'asn' => $location->asn?->organization,
+    ];
+});
+```
+
+That is the whole integration. The service provider, the `geolocate` macro and the `Geolocator`
+facade alias are registered for you, there is no API key to configure, and a lookup is a file read
+rather than an HTTP call.
+
+To look up an address other than the caller's, call the facade directly:
+
+```php
+use SameOldNick\Geolocator\Facades\Geolocator;
+
+$location = Geolocator::lookup('8.8.8.8');
+```
+
+Both return the same `LocationResult` — see [Looking up an address](#looking-up-an-address) for what
+you can read from it.
+
 ### Resolving the geolocator
 
 ```php
@@ -127,6 +183,25 @@ Private, reserved and unparseable addresses return no records, so the result is 
 Geolocator::lookup('192.168.1.1')->hasResults(); // false
 (string) Geolocator::lookup('192.168.1.1');      // 'Unknown Location'
 ```
+
+### When a lookup throws
+
+Lookups are file reads, and three things make them throw rather than return an empty result:
+
+- **A missing database file.** The exception comes from `maxmind-db/reader` itself — an
+  `\InvalidArgumentException` naming the file — so that is the type to catch; there is no
+  package-specific exception. Run `php artisan geolocator:update-iplocationdb` once per environment, or
+  bake the files into your image.
+- **`lookup()` reads all three editions.** It opens the country, city _and_ ASN readers, so all three
+  files have to exist even if you only ever read the country from the result. To depend on fewer
+  files, call `lookupCountry()`, `lookupCity()` or `lookupAsn()`, which read one edition each.
+- **IPv6 addresses read the `-IPv6` editions.** `lookup('2a00:1450:4009::200e')` resolves through
+  `IPLOCATIONDB_*_PATH_V6`, so an IPv6 address throws on a machine where only the IPv4 editions were
+  configured — while every IPv4 address keeps working.
+
+Private, reserved and unparseable addresses are not on that list: they are filtered before the
+database is queried, so they return an empty result. What an empty result does not mean is that the
+database is absent — when the file cannot be opened, the lookup throws even for `192.168.1.1`.
 
 ### Resolving the current request
 
