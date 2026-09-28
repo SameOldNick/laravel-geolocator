@@ -275,4 +275,60 @@ class GeolocatorTest extends TestCase
 
         $this->assertNotSame($recorder->result, Geolocator::lookup(self::PUBLIC_IP));
     }
+
+    /**
+     * Ensure the request macro honours the edition argument.
+     */
+    public function test_request_macro_uses_all_editions(): void
+    {
+        $recorder = $this->useRecordingDriver();
+
+        $request = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => self::PUBLIC_IP]);
+
+        $this->assertSame($recorder->result, $request->geolocate(edition: 'all'));
+        $this->assertSame('lookup', $recorder->calls[0]['method']);
+        $this->assertSame(self::PUBLIC_IP, $recorder->calls[0]['ip']);
+    }
+
+    /**
+     * Ensure the request macro honours the country edition argument.
+     */
+    public function test_request_macro_uses_country_edition(): void
+    {
+        $recorder = $this->useRecordingDriver();
+
+        $request = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => self::PUBLIC_IP]);
+
+        $this->assertSame($recorder->result, $request->geolocate(edition: 'country'));
+        $this->assertSame('lookupCountry', $recorder->calls[0]['method']);
+        $this->assertSame(self::PUBLIC_IP, $recorder->calls[0]['ip']);
+    }
+
+    /**
+     * Ensure the request macro honours the city edition argument.
+     */
+    public function test_request_macro_uses_city_edition(): void
+    {
+        $recorder = $this->useRecordingDriver();
+
+        $request = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => self::PUBLIC_IP]);
+
+        $this->assertSame($recorder->result, $request->geolocate(edition: 'city'));
+        $this->assertSame('lookupCity', $recorder->calls[0]['method']);
+        $this->assertSame(self::PUBLIC_IP, $recorder->calls[0]['ip']);
+    }
+
+    /**
+     * Ensure the request macro honours the ASN edition argument.
+     */
+    public function test_request_macro_uses_asn_edition(): void
+    {
+        $recorder = $this->useRecordingDriver();
+
+        $request = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => self::PUBLIC_IP]);
+
+        $this->assertSame($recorder->result, $request->geolocate(edition: 'asn'));
+        $this->assertSame('lookupAsn', $recorder->calls[0]['method']);
+        $this->assertSame(self::PUBLIC_IP, $recorder->calls[0]['ip']);
+    }
 }

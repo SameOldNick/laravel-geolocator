@@ -79,7 +79,7 @@ class ServiceProvider extends BaseServiceProvider
      */
     protected function registerMacros(): void
     {
-        Request::macro('geolocate', function ($default = '0.0.0.0') {
+        Request::macro('geolocate', function ($default = '0.0.0.0', $edition = 'all') {
             $geolocator = app(GeolocatorManager::class);
 
             // Determine the client IP address, ignoring private/internal IPs
@@ -88,7 +88,12 @@ class ServiceProvider extends BaseServiceProvider
                 return is_string($ip) && ! IPAddressHelper::isPrivateIPAddress($ip);
             }, $this->ip());
 
-            return $geolocator->lookup($ip ?? $default);
+            return match ($edition) {
+                'country' => $geolocator->lookupCountry($ip ?? $default),
+                'city' => $geolocator->lookupCity($ip ?? $default),
+                'asn' => $geolocator->lookupAsn($ip ?? $default),
+                default => $geolocator->lookup($ip ?? $default),
+            };
         });
     }
 }
