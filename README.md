@@ -319,11 +319,13 @@ whatever your application uses (mail, Slack, database notifications).
 ## AI Guidelines
 
 The package ships a [Laravel Boost](https://laravel.com/docs/boost) guideline at
-`resources/boost/guidelines/core.blade.php`. When a Boost user runs `php artisan boost:install`, or
-`php artisan boost:update --discover` after installing this package, the guideline is merged into
-their agent's context. It covers the parts that are easy to get wrong: a missing database throwing
-instead of returning an empty result, the aliasing needed when importing the facade and the contract
-together, the `geolocate` request macro, and why `X-Forwarded-For` must not be parsed by hand.
+`resources/boost/guidelines/core.blade.php` and a Boost skill at
+`resources/boost/skills/geolocation-lookup/SKILL.md`. When a Boost user runs
+`php artisan boost:install`, or `php artisan boost:update --discover` after installing this package, the
+guideline is merged into their agent's context and the skill is installed for on-demand use. The
+guideline covers the parts that are easy to get wrong: a missing database throwing instead of returning
+an empty result, the aliasing needed when importing the facade and the contract together, the
+`geolocate` request macro, and why `X-Forwarded-For` must not be parsed by hand.
 
 Nothing depends on Boost in either direction: discovery is by convention from
 `vendor/sameoldnick/laravel-geolocator/resources/boost`, so the guideline costs users who do not use
@@ -331,8 +333,10 @@ Boost nothing at all. Boost renders a guideline as Blade and silently skips one 
 so its snippets are kept inside `@verbatim` — see [CONTRIBUTING.md](CONTRIBUTING.md) for how to
 re-render it after editing.
 
-There is no agent skill to go with it. The package has no multi-step authoring workflow for an agent
-to improvise — setup is a one-time console task — so a guideline is enough.
+The skill is where the longer material lives: requirements and setup, reading a result, the failure
+modes that throw, the `geolocate` request macro, testing with `Geolocator::fake()`, custom drivers, the
+update command and its events, and a troubleshooting table. Guidelines load upfront while skills load
+on demand when a task matches, so the split keeps the always-on guideline short without losing detail.
 
 ## Changelog
 

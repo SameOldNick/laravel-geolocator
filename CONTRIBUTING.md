@@ -103,8 +103,10 @@ the Codecov report rather than trusting the tick.
   render it — anything moved there stops being read.
 - The Boost guideline at `resources/boost/guidelines/core.blade.php` is rendered as Blade by Boost,
   which silently skips a file that fails to render. Keep its snippets inside `@verbatim`, and render it
-  by hand after editing. No agent skill is shipped with it deliberately: there is no multi-step
-  authoring workflow for an agent to improvise.
+  by hand after editing.
+- The Boost skill at `resources/boost/skills/geolocation-lookup/SKILL.md` is plain Markdown with YAML
+  frontmatter, not Blade. Boost discovers it by convention, so the frontmatter must parse and its `name`
+  must match the directory name.
 
 ## Gaps in the suite
 
@@ -113,7 +115,8 @@ Worth knowing before you assume something is covered:
 - No `.mmdb` fixture is committed, so the ip-location-db driver is only covered through its path
   selection and its failure mode. A licence-compatible edition is needed to go further.
 - Nothing asserts the README's reference tables or its manifest claims; they are maintained by hand.
-- The Boost guideline is not covered by a test either.
+- Neither the Boost guideline nor the Boost skill is covered by a test, so nothing checks that the
+  skill's frontmatter parses or that its examples still match the code.
 
 ## Pull requests
 
