@@ -24,7 +24,10 @@ class RecordingGeolocator implements GeolocatorContract
     /**
      * Create a new class instance.
      */
-    public function __construct(public readonly LocationResult $result) {}
+    public function __construct(public readonly LocationResult $result)
+    {
+        //
+    }
 
     /**
      * {@inheritDoc}

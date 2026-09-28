@@ -32,7 +32,7 @@ class ReadmeExamplesTest extends TestCase
      */
     public function test_the_private_address_example_returns_an_empty_result(): void
     {
-        Geolocator::fake(0);
+        Geolocator::fake();
 
         $result = Geolocator::lookup('192.168.1.1');
 
@@ -45,7 +45,7 @@ class ReadmeExamplesTest extends TestCase
      */
     public function test_the_documented_accessors_return_the_documented_values(): void
     {
-        Geolocator::fake(0);
+        Geolocator::fake();
 
         $result = new LocationResult(
             ipAddress: '8.8.8.8',
@@ -63,7 +63,7 @@ class ReadmeExamplesTest extends TestCase
         );
 
         /** @var FakeGeolocator $driver */
-        $driver = Geolocator::fake(0);
+        $driver = Geolocator::fake();
 
         $driver->mock('8.8.8.8', $result);
 
@@ -87,6 +87,82 @@ class ReadmeExamplesTest extends TestCase
         $this->assertArrayHasKey('longitude', $coordinates);
 
         $this->assertSame(['ipAddress', 'country', 'city', 'asn'], array_keys($location->toArray()));
+    }
+
+    /**
+     * The "Faking lookups in your tests" section: the documented key forms, precedence and closures.
+     */
+    public function test_the_faking_example_matches_the_documented_behaviour(): void
+    {
+        $result = new LocationResult(
+            ipAddress: '8.8.8.8',
+            country: null,
+            city: null,
+            asn: AsnResult::create(15169, 'Google LLC'),
+        );
+
+        /** @var FakeGeolocator $driver */
+        $driver = Geolocator::fake(mockedResults: ['*' => null]);
+
+        $driver->mock('8.8.8.8', $result);
+
+        // An exact address takes precedence over the wildcard.
+        $this->assertSame($result, $driver->lookup('8.8.8.8'));
+
+        // Anything else falls back to the wildcard, which resolves to nothing.
+        $this->assertFalse($driver->lookup('9.9.9.9')->hasResults());
+
+        // A glob pattern applies to the addresses it matches.
+        $subnet = new LocationResult(
+            ipAddress: '8.8.8.4',
+            country: null,
+            city: null,
+            asn: null,
+        );
+
+        $driver->mock('8.8.8.*', $subnet);
+
+        $this->assertSame($subnet, $driver->lookup('8.8.8.4'));
+
+        // A closure receives the address and the calling method.
+        $driver->mock('8.8.4.4', fn (string $ip, string $method) => new LocationResult(
+            ipAddress: "{$ip}/{$method}",
+            country: null,
+            city: null,
+            asn: null,
+        ));
+
+        $this->assertSame('8.8.4.4/lookupCity', $driver->lookupCity('8.8.4.4')->ipAddress);
+    }
+
+    /**
+     * The "Faking lookups in your tests" defaults: chanceOfEmpty, generated data and private addresses.
+     */
+    public function test_the_faking_defaults_match_the_documented_behaviour(): void
+    {
+        /** @var FakeGeolocator $driver */
+        $driver = Geolocator::fake();
+
+        $this->assertSame(0, $driver->chanceOfEmpty);
+
+        // Unmocked public addresses get generated data; private ones resolve to nothing.
+        $this->assertTrue($driver->lookup('8.8.4.4')->hasResults());
+        $this->assertFalse($driver->lookup('192.168.1.1')->hasResults());
+
+        // The README warns that a wildcard mock answers private addresses too.
+        $result = new LocationResult(
+            ipAddress: '192.168.1.1',
+            country: null,
+            city: null,
+            asn: null,
+        );
+
+        $driver->mock('*', $result);
+
+        $this->assertSame($result, $driver->lookup('192.168.1.1'));
+
+        // chanceOfEmpty is documented as a named argument.
+        $this->assertSame(100, Geolocator::fake(chanceOfEmpty: 100)->chanceOfEmpty);
     }
 
     /**

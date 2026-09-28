@@ -87,7 +87,7 @@ can send it, so hand-parsing trusts a spoofable value.
 @verbatim
     <code-snippet name="Faking a lookup" lang="php">
         /** @var \SameOldNick\Geolocator\Drivers\FakeGeolocator $driver */
-        $driver = Geolocator::fake(0); // 0 disables the random empty results
+        $driver = Geolocator::fake();
 
         $driver->mock('8.8.8.8', new LocationResult(
         ipAddress: '8.8.8.8',
@@ -95,11 +95,18 @@ can send it, so hand-parsing trusts a spoofable value.
         city: null,
         asn: null,
         ));
+
+        $driver->mock('1.1.1.1'); // null: this address resolves to nothing
     </code-snippet>
 @endverbatim
 
-Without an argument `fake()` returns an empty result for 10% of public addresses, which is what makes
-assertions flaky.
+A mock key may be an exact address, a glob pattern or the `*` wildcard (an exact address beats a glob,
+which beats the wildcard); a value may be a `LocationResult`, a closure, or `null` for an empty result.
+Unmocked public addresses get generated data, and private addresses stay empty unless a mock matches
+them.
+
+`chanceOfEmpty` (default `0`) is the percentage chance of an empty result for an unmocked public
+address, and is passed by name: `Geolocator::fake(chanceOfEmpty: 100)`.
 
 ### Custom drivers
 

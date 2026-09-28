@@ -90,10 +90,28 @@ class GeolocatorFacadeTest extends TestCase
      */
     public function test_fake_honours_the_chance_of_empty(): void
     {
-        $fake = Geolocator::fake(100);
+        $fake = Geolocator::fake(chanceOfEmpty: 100);
 
         $this->assertSame(100, $fake->chanceOfEmpty);
         $this->assertFalse(Geolocator::lookup('8.8.8.8')->hasResults());
+    }
+
+    /**
+     * Ensure mocked results passed to fake() are used by the fake.
+     */
+    public function test_fake_accepts_mocked_results(): void
+    {
+        $result = new LocationResult(
+            ipAddress: '8.8.8.8',
+            country: null,
+            city: null,
+            asn: null,
+        );
+
+        $fake = Geolocator::fake(['8.8.8.8' => $result]);
+
+        $this->assertSame(['8.8.8.8' => $result], $fake->getMocks());
+        $this->assertSame($result, Geolocator::lookup('8.8.8.8'));
     }
 
     /**

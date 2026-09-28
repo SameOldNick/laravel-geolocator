@@ -223,6 +223,8 @@ Pass your own default with `$request->geolocate('127.0.0.1')`.
 
 ### Faking lookups in your tests
 
+`Geolocator::fake()` swaps the facade root for an in-memory fake, so lookups never touch a database:
+
 ```php
 use SameOldNick\Geolocator\Drivers\FakeGeolocator;
 use SameOldNick\Geolocator\DTOs\AsnResult;
@@ -232,26 +234,58 @@ use SameOldNick\Geolocator\Facades\Geolocator;
 /** @var FakeGeolocator $driver */
 $driver = Geolocator::fake();
 
-Geolocator::lookup('8.8.8.8'); // random result, no database access
+Geolocator::lookup('8.8.8.8'); // generated result, no database access
 
-// Return a specific result for an address.
-$driver->mock('8.8.8.8', new LocationResult(
+$result = new LocationResult(
     ipAddress: '8.8.8.8',
     country: null,
     city: null,
     asn: AsnResult::create(15169, 'Google LLC'),
-));
+);
 
-// Or mock an address that resolves to nothing.
-$driver->mock('1.1.1.1');
+// An exact address takes precedence over a glob, which takes precedence over the wildcard.
+$driver->mock('8.8.8.8', $result); // one address
+$driver->mock('8.8.8.*', $result); // any address matching the pattern
+$driver->mock('1.1.1.1');          // null: this address resolves to nothing
+$driver->mock('*', $result);       // anything else
 ```
 
-By default `fake()` returns an empty result for 10% of public addresses, which is what makes the fake
-non-deterministic. Pass a different percentage, or `0` when you need real data for every public
-address:
+`mock()` returns the fake so it can be chained, and the same results can be passed to `fake()` up front:
 
 ```php
-Geolocator::fake(0);
+$driver = Geolocator::fake(
+    mockedResults: [
+        '8.8.8.8' => $result,
+        '1.1.1.1' => null,
+    ],
+    chanceOfEmpty: 0,
+);
+```
+
+A mocked value is a `LocationResult`, a closure, or `null` for an empty result. A closure receives the
+address and the name of the method that was called, so one mock can answer the edition-specific lookups
+differently:
+
+```php
+$driver->mock('8.8.*', fn (string $ip, string $method) => $method === 'lookupAsn'
+    ? new LocationResult(
+        ipAddress: $ip,
+        country: null,
+        city: null,
+        asn: AsnResult::create(15169, 'Google LLC'),
+    )
+    : null);
+```
+
+Addresses you have not mocked get generated data, except private, reserved and malformed addresses,
+which resolve to an empty result. A mock overrides that: a `'*'` wildcard answers private addresses too,
+so reach for it deliberately.
+
+`chanceOfEmpty` is the percentage chance of an empty result for an unmocked public address. It defaults
+to `0`, which keeps tests deterministic, and it is passed by name:
+
+```php
+Geolocator::fake(chanceOfEmpty: 100);
 ```
 
 The fake stays installed for the rest of the test, which is usually what you want since every test

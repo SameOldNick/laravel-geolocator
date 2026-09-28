@@ -155,7 +155,7 @@ use SameOldNick\Geolocator\DTOs\LocationResult;
 use SameOldNick\Geolocator\Facades\Geolocator;
 
 /** @var \SameOldNick\Geolocator\Drivers\FakeGeolocator $driver */
-$driver = Geolocator::fake(0); // 0 = never return an empty result by accident
+$driver = Geolocator::fake();
 
 $driver->mock('8.8.8.8', new LocationResult(
     ipAddress: '8.8.8.8',
@@ -167,10 +167,26 @@ $driver->mock('8.8.8.8', new LocationResult(
 $driver->mock('1.1.1.1'); // null result: this address resolves to nothing
 ```
 
-`Geolocator::fake()` swaps the facade root for `FakeGeolocator`, which never touches a database. Its
-only argument is the percentage chance of an empty result for a public address; the default `10` is what
-makes assertions flaky, so pass `0` unless you are testing the empty path. Unmocked public addresses get
-random Faker-generated country, city and ASN data; private addresses still resolve to nothing.
+A mock key is an exact address, a glob pattern (e.g. `8.8.8.*`) or the `*` wildcard; an exact address
+wins over a glob, which wins over the wildcard. A value is a `LocationResult`, a closure, or `null` for an
+empty result. A closure receives the address and the calling method name, so it can answer an
+edition-specific lookup differently:
+
+```php
+$driver->mock('8.8.*', fn (string $ip, string $method) => $method === 'lookupAsn' ? $asnResult : null);
+```
+
+Both arguments of `fake()` are optional and both are passed by name, so `fake(0)` is **not** the same
+call: `mockedResults` pins results up front and `chanceOfEmpty` (default `0`) is the percentage chance of
+an empty result for an unmocked public address.
+
+```php
+Geolocator::fake(mockedResults: ['1.1.1.1' => null], chanceOfEmpty: 100);
+```
+
+Unmocked public addresses get generated Faker data. Private, reserved and malformed addresses resolve to
+nothing — **unless a mock matches them**, which is how a `'*'` wildcard ends up answering private
+addresses.
 
 To hand the facade back to the configured driver mid-test, or after changing `geolocator.driver`, use
 `Geolocator::swap(app(GeolocatorManager::class))` and `Geolocator::forgetDrivers()`.
@@ -241,4 +257,4 @@ $location = Cache::remember("geo:{$ip}", 3600, fn () => Geolocator::lookup($ip)-
 | `$location->country` is `null` but `$location->city` is populated | the country edition has no record for the address; each DTO is built from its own edition only | fall back to `$location->city->countryCode`, or call `lookupCountry()`                          |
 | `Driver [x] is not supported.`                                    | no creator is registered for that name                                                         | `Geolocator::extend('x', ...)` or a `createXDriver()` method; a container binding is not enough |
 | Lookups return stale data after an update                         | the static reader cache                                                                        | restart the queue workers or Octane process                                                     |
-| Fake lookups are non-deterministic                                | `fake()` defaults to a 10% empty rate                                                          | `Geolocator::fake(0)`                                                                           |
+| Fake lookups return empty results at random                       | `chanceOfEmpty` is set above 0                                                                 | pass `chanceOfEmpty: 0` — that is the default                                                   |

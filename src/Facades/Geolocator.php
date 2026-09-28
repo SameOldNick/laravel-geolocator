@@ -2,9 +2,11 @@
 
 namespace SameOldNick\Geolocator\Facades;
 
+use Closure;
 use Illuminate\Support\Facades\Facade;
 use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
 use SameOldNick\Geolocator\Drivers\FakeGeolocator;
+use SameOldNick\Geolocator\DTOs\LocationResult;
 
 /**
  * Geolocator Facade
@@ -33,12 +35,14 @@ class Geolocator extends Facade
     /**
      * Swap the facade root for a fake geolocator.
      *
-     * @param  int|null  $chanceOfEmpty  Percentage chance of returning an empty result. Set to 0 for deterministic results. Default: 10.
+     * @param  array<string, LocationResult|Closure|null>  $mockedResults  Results to return, keyed by exact address, glob pattern (e.g. "8.8.8.*") or the "*" wildcard. A closure receives the looked up address and the calling method name, and may return null for an empty result.
+     * @param  int|null  $chanceOfEmpty  Percentage chance of an empty result for an unpinned public address. Set to 0 for deterministic results. Default: 0.
      */
-    public static function fake(?int $chanceOfEmpty = null): GeolocatorContract|FakeGeolocator
+    public static function fake(array $mockedResults = [], ?int $chanceOfEmpty = null): GeolocatorContract|FakeGeolocator
     {
         static::swap($fake = new FakeGeolocator(
-            $chanceOfEmpty ?? 10,
+            $mockedResults,
+            $chanceOfEmpty ?? 0,
         ));
 
         return $fake;

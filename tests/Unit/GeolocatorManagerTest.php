@@ -32,7 +32,10 @@ class GeolocatorManagerTest extends TestCase
      */
     public function test_extended_drivers_are_selectable_by_name(): void
     {
-        $driver = new FakeGeolocator(0);
+        $driver = new FakeGeolocator(
+            mockedResults: [],
+            chanceOfEmpty: 0,
+        );
 
         Geolocator::extend('extended', fn () => $driver);
 
@@ -48,7 +51,10 @@ class GeolocatorManagerTest extends TestCase
      */
     public function test_lookup_delegates_to_the_configured_driver(): void
     {
-        $driver = new FakeGeolocator(0);
+        $driver = new FakeGeolocator(
+            mockedResults: [],
+            chanceOfEmpty: 0,
+        );
 
         $result = new LocationResult(
             ipAddress: '8.8.8.8',
