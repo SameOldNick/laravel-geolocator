@@ -3,11 +3,9 @@
 namespace SameOldNick\Geolocator;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
 use SameOldNick\Geolocator\Contracts\Geolocator;
-use SameOldNick\Geolocator\Support\IPAddressHelper;
 
 class ServiceProvider extends BaseServiceProvider
 {
@@ -84,19 +82,15 @@ class ServiceProvider extends BaseServiceProvider
         }
 
         Request::macro('geolocate', function ($default = '0.0.0.0', $edition = 'all', $driver = null) {
+            $ip = $this->ip() ?? $default;
+
             $geolocator = app(GeolocatorManager::class)->driver($driver);
 
-            // Determine the client IP address, ignoring private/internal IPs
-            $ip = Arr::first($this->getClientIps(), function ($ip) {
-                // getClientIps() yields the raw REMOTE_ADDR value, which may be null
-                return is_string($ip) && ! IPAddressHelper::isPrivateIPAddress($ip);
-            }, $this->ip());
-
             return match ($edition) {
-                'country' => $geolocator->lookupCountry($ip ?? $default),
-                'city' => $geolocator->lookupCity($ip ?? $default),
-                'asn' => $geolocator->lookupAsn($ip ?? $default),
-                default => $geolocator->lookup($ip ?? $default),
+                'country' => $geolocator->lookupCountry($ip),
+                'city' => $geolocator->lookupCity($ip),
+                'asn' => $geolocator->lookupAsn($ip),
+                default => $geolocator->lookup($ip),
             };
         });
     }
