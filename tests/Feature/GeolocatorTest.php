@@ -38,13 +38,16 @@ class GeolocatorTest extends TestCase
     /**
      * Register a recording driver and make it the configured default driver.
      */
-    protected function useRecordingDriver(): RecordingGeolocator
+    protected function useRecordingDriver(string $driver = 'recording', bool $makeDefault = true): RecordingGeolocator
     {
         $recorder = new RecordingGeolocator($this->cannedResult());
 
-        Geolocator::extend('recording', fn () => $recorder);
+        Geolocator::extend($driver, fn () => $recorder);
 
-        config()->set('geolocator.driver', 'recording');
+        if ($makeDefault) {
+            config()->set('geolocator.driver', $driver);
+        }
+
         Geolocator::forgetDrivers();
 
         return $recorder;
@@ -329,6 +332,19 @@ class GeolocatorTest extends TestCase
 
         $this->assertSame($recorder->result, $request->geolocate(edition: 'asn'));
         $this->assertSame('lookupAsn', $recorder->calls[0]['method']);
+        $this->assertSame(self::PUBLIC_IP, $recorder->calls[0]['ip']);
+    }
+
+    /**
+     * Ensure the request macro honours a custom driver.
+     */
+    public function test_request_macro_uses_custom_driver(): void
+    {
+        $recorder = $this->useRecordingDriver('custom', false);
+
+        $request = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => self::PUBLIC_IP]);
+
+        $this->assertSame($recorder->result, $request->geolocate(driver: 'custom'));
         $this->assertSame(self::PUBLIC_IP, $recorder->calls[0]['ip']);
     }
 }

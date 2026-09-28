@@ -83,8 +83,8 @@ class ServiceProvider extends BaseServiceProvider
             return; // respect an existing definition rather than clobbering it
         }
 
-        Request::macro('geolocate', function ($default = '0.0.0.0', $edition = 'all') {
-            $geolocator = app(GeolocatorManager::class);
+        Request::macro('geolocate', function ($default = '0.0.0.0', $edition = 'all', $driver = null) {
+            $geolocator = app(GeolocatorManager::class)->driver($driver);
 
             // Determine the client IP address, ignoring private/internal IPs
             $ip = Arr::first($this->getClientIps(), function ($ip) {
