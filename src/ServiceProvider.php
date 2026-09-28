@@ -79,6 +79,10 @@ class ServiceProvider extends BaseServiceProvider
      */
     protected function registerMacros(): void
     {
+        if (Request::hasMacro('geolocate')) {
+            return; // respect an existing definition rather than clobbering it
+        }
+
         Request::macro('geolocate', function ($default = '0.0.0.0', $edition = 'all') {
             $geolocator = app(GeolocatorManager::class);
 
