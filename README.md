@@ -93,9 +93,10 @@ and attribution terms before redistributing the files yourself.
   and large enough for the editions you enable (the city edition is the largest). On a read-only or
   ephemeral filesystem, either bake the databases into your image or point the `IPLOCATIONDB_*_PATH`
   variables at a writable mount.
-- **Long-running workers**: the ip-location-db driver caches one reader per database path for the
-  lifetime of the process, so restart queue workers and Octane after updating, otherwise they keep
-  reading the handle they opened at boot.
+- **Long-running workers**: each edition's reader is cached by the scoped reader provider that built
+  it, so `queue:work` discards it before every job and Octane discards it between requests — both read
+  a replaced database without a restart. Only a process that keeps one open across an update (a
+  long-running console command, or the job that is mid-flight) serves the old file until it finishes.
 
 ## Usage
 

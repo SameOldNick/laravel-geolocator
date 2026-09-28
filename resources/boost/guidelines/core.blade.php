@@ -124,6 +124,7 @@ container binding alone is **not** consulted, and throws `Driver [my-driver] not
 
 ### Deployment
 
-The ip-location-db driver caches one reader per database path for the lifetime of the process, so
-restart queue workers and Octane after the databases are updated. Otherwise they keep reading the
-handle they opened at boot.
+Each edition's reader is cached by the scoped reader provider that built it, so queue workers discard
+it before every job and Octane discards it between requests: both pick up a replaced database without
+a restart. Only a process that keeps one open across an update (a long-running console command, or the
+job that is mid-flight) keeps reading the old handle until it finishes.

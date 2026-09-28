@@ -2,19 +2,13 @@
 
 namespace SameOldNick\Geolocator\Drivers\IPLocationDB;
 
+use InvalidArgumentException;
 use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
 use SameOldNick\Geolocator\DTOs\LocationResult;
 use SameOldNick\Geolocator\Support\IPAddressHelper;
 
 class Geolocator implements GeolocatorContract
 {
-    /**
-     * Cached reader instances
-     *
-     * @var array<string, Reader>
-     */
-    protected static array $readers = [];
-
     /**
      * The result mapper
      */
@@ -23,7 +17,7 @@ class Geolocator implements GeolocatorContract
     /**
      * Create a new class instance.
      */
-    public function __construct(protected readonly array $config)
+    public function __construct()
     {
         $this->mapper = new ResultMapper;
     }
@@ -34,9 +28,9 @@ class Geolocator implements GeolocatorContract
     public function lookup(string $ip): LocationResult
     {
         return $this->mapper->mapResult($ip, [
-            'country' => $this->createReader('country', $ip)->getRecord($ip),
-            'city' => $this->createReader('city', $ip)->getRecord($ip),
-            'asn' => $this->createReader('asn', $ip)->getRecord($ip),
+            'country' => $this->getReader('country', $ip)->getRecord($ip),
+            'city' => $this->getReader('city', $ip)->getRecord($ip),
+            'asn' => $this->getReader('asn', $ip)->getRecord($ip),
         ]);
     }
 
@@ -45,7 +39,7 @@ class Geolocator implements GeolocatorContract
      */
     public function lookupCountry(string $ip): LocationResult
     {
-        $reader = $this->createReader('country', $ip);
+        $reader = $this->getReader('country', $ip);
 
         $record = $reader->getRecord($ip);
 
@@ -59,7 +53,7 @@ class Geolocator implements GeolocatorContract
      */
     public function lookupCity(string $ip): LocationResult
     {
-        $reader = $this->createReader('city', $ip);
+        $reader = $this->getReader('city', $ip);
 
         $record = $reader->getRecord($ip);
 
@@ -73,7 +67,7 @@ class Geolocator implements GeolocatorContract
      */
     public function lookupAsn(string $ip): LocationResult
     {
-        $reader = $this->createReader('asn', $ip);
+        $reader = $this->getReader('asn', $ip);
 
         $record = $reader->getRecord($ip);
 
@@ -91,26 +85,19 @@ class Geolocator implements GeolocatorContract
     }
 
     /**
-     * Get database path for edition and IP address
+     * Get a reader instance for the given edition and IP address
      */
-    protected function getDatabasePath(string $edition, string $ip): string
+    protected function getReader(string $edition, string $ip): Reader
     {
-        $ipVersion = $this->isIpv6($ip) ? 'ipv6' : 'ipv4';
+        $providerClass = match ($edition) {
+            'country' => Providers\CountryReaderProvider::class,
+            'city' => Providers\CityReaderProvider::class,
+            'asn' => Providers\AsnReaderProvider::class,
+            default => throw new InvalidArgumentException("Invalid edition: $edition"),
+        };
 
-        return $this->config['editions'][$edition][$ipVersion];
-    }
+        $provider = app($providerClass);
 
-    /**
-     * Create a reader instance for the given edition and IP address
-     */
-    protected function createReader(string $edition, string $ip): Reader
-    {
-        $databasePath = $this->getDatabasePath($edition, $ip);
-
-        if (! isset(self::$readers[$databasePath])) {
-            self::$readers[$databasePath] = new Reader($databasePath);
-        }
-
-        return self::$readers[$databasePath];
+        return $provider->getReader($this->isIpv6($ip) ? 6 : 4);
     }
 }

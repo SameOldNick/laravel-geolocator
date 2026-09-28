@@ -227,8 +227,10 @@ and weekly by default, so do **not** add it to `routes/console.php`.
 
 ## Deployment notes
 
-- **Restart queue workers and Octane after an update.** Readers are cached in a static array keyed by
-  database path, so a long-running process keeps the handle it opened at boot and serves the old file.
+- **Readers are scoped, not process-wide.** Each edition's reader is cached by the scoped provider that
+  built it, so a queue worker discards it before every job and Octane discards it between requests —
+  both read a replaced database without a restart. Only a process that keeps one open across an update
+  (a long-running console command, or the job that is mid-flight) serves the old file until it finishes.
 - The database directory must be writable by the user running the update command. On an ephemeral or
   read-only filesystem, bake the `.mmdb` files into the image or mount a writable volume.
 - **Caching results:** the DTOs implement `Arrayable` only — no `Jsonable` and no `fromArray()` — so a
@@ -256,5 +258,5 @@ $location = Cache::remember("geo:{$ip}", 3600, fn () => Geolocator::lookup($ip)-
 | IPv6 addresses throw while IPv4 works                             | the `-IPv6` editions are not configured                                                        | set `IPLOCATIONDB_*_PATH_V6`, or install them                                                   |
 | `$location->country` is `null` but `$location->city` is populated | the country edition has no record for the address; each DTO is built from its own edition only | fall back to `$location->city->countryCode`, or call `lookupCountry()`                          |
 | `Driver [x] is not supported.`                                    | no creator is registered for that name                                                         | `Geolocator::extend('x', ...)` or a `createXDriver()` method; a container binding is not enough |
-| Lookups return stale data after an update                         | the static reader cache                                                                        | restart the queue workers or Octane process                                                     |
+| Lookups serve the old database after an update                    | a reader opened before the update is still in use                                              | restart that process; workers and Octane drop it on the next job or request                     |
 | Fake lookups return empty results at random                       | `chanceOfEmpty` is set above 0                                                                 | pass `chanceOfEmpty: 0` — that is the default                                                   |
