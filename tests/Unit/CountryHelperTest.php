@@ -2,6 +2,7 @@
 
 namespace SameOldNick\Geolocator\Tests\Unit;
 
+use ReflectionClass;
 use SameOldNick\Geolocator\DTOs\CountryResult;
 use SameOldNick\Geolocator\Support\CountryHelper;
 use SameOldNick\Geolocator\Tests\TestCase;
@@ -73,5 +74,33 @@ class CountryHelperTest extends TestCase
         $this->assertSame('GB', $result->countryCode);
         $this->assertSame(CountryHelper::getCountryName('GB'), $result->countryName);
         $this->assertSame(CountryHelper::getCountryCoordinates('GB'), $result->getCoordinates());
+    }
+
+    /**
+     * Ensure every mapped country code points at a code the data file contains.
+     */
+    public function test_every_mapped_country_code_exists_in_the_country_list(): void
+    {
+        $mappings = (new ReflectionClass(CountryHelper::class))->getStaticPropertyValue('mappings');
+
+        foreach ($mappings as $from => $to) {
+            $this->assertTrue(
+                CountryHelper::isCountryCodeValid($to),
+                "Mapping {$from} -> {$to} points at a code missing from resources/data/countries.php.",
+            );
+        }
+    }
+
+    /**
+     * Ensure every code in the country list can create a result, so the fake can draw any of them.
+     */
+    public function test_every_country_code_can_create_a_result(): void
+    {
+        foreach (CountryHelper::getCountryCodes() as $countryCode) {
+            $this->assertNotNull(
+                CountryResult::create($countryCode),
+                "CountryResult::create('{$countryCode}') returned null.",
+            );
+        }
     }
 }

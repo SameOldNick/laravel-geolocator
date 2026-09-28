@@ -252,6 +252,11 @@ return [
         'latitude' => '16.0',
         'longitude' => '-24.0',
     ],
+    'CW' => [
+        'name' => 'Curacao',
+        'latitude' => '12.1696',
+        'longitude' => '-68.99',
+    ],
     'CX' => [
         'name' => 'Christmas Island',
         'latitude' => '-10.5',
