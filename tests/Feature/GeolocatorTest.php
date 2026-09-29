@@ -7,6 +7,7 @@ use InvalidArgumentException;
 use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
 use SameOldNick\Geolocator\Drivers\Fake\FakeReader;
 use SameOldNick\Geolocator\Drivers\IPLocationDB\Geolocator as IpLocationDbGeolocator;
+use SameOldNick\Geolocator\Drivers\IPLocationDB\Providers\CountryReaderProvider;
 use SameOldNick\Geolocator\DTOs\LocationResult;
 use SameOldNick\Geolocator\Facades\Geolocator;
 use SameOldNick\Geolocator\GeolocatorManager;
@@ -142,15 +143,8 @@ class GeolocatorTest extends TestCase
         $reader = new FakeReader;
         $provider = new RecordingReaderProvider(createReader: fn () => $reader);
 
-        Geolocator::extend('iplocationdb', function () use ($provider) {
-            return new IpLocationDbGeolocator(
-                $provider,
-                $provider,
-                $provider,
-            );
-        });
-
-        Geolocator::forgetDrivers();
+        $this->app->forgetInstance(CountryReaderProvider::class);
+        $this->app->instance(CountryReaderProvider::class, $provider);
 
         $reader->mock(self::PUBLIC_IP, ['country_code' => 'US']);
 

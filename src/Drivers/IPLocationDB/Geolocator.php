@@ -18,11 +18,8 @@ class Geolocator implements GeolocatorContract
     /**
      * Create a new class instance.
      */
-    public function __construct(
-        protected readonly Contracts\ReaderProvider $countryProvider,
-        protected readonly Contracts\ReaderProvider $cityProvider,
-        protected readonly Contracts\ReaderProvider $asnProvider,
-    ) {
+    public function __construct()
+    {
         $this->mapper = new ResultMapper;
     }
 
@@ -89,6 +86,22 @@ class Geolocator implements GeolocatorContract
     }
 
     /**
+     * Get the reader provider for the given edition
+     *
+     * @param  string  $edition  The edition name (country, city, asn)
+     * @return Contracts\ReaderProvider The reader provider instance
+     */
+    protected function getReaderProvider(string $edition): Contracts\ReaderProvider
+    {
+        return match ($edition) {
+            'country' => app(Providers\CountryReaderProvider::class),
+            'city' => app(Providers\CityReaderProvider::class),
+            'asn' => app(Providers\AsnReaderProvider::class),
+            default => throw new InvalidArgumentException("Invalid edition: $edition"),
+        };
+    }
+
+    /**
      * Get a reader instance for the given edition and IP address
      *
      * @param  string  $edition  The edition name (country, city, asn)
@@ -97,12 +110,7 @@ class Geolocator implements GeolocatorContract
      */
     protected function getReader(string $edition, string $ip): ReaderContract
     {
-        $provider = match ($edition) {
-            'country' => $this->countryProvider,
-            'city' => $this->cityProvider,
-            'asn' => $this->asnProvider,
-            default => throw new InvalidArgumentException("Invalid edition: $edition"),
-        };
+        $provider = $this->getReaderProvider($edition);
 
         return $provider->getReader($this->isIpv6($ip) ? 6 : 4);
     }
