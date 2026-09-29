@@ -23,6 +23,10 @@ class ServiceProvider extends BaseServiceProvider
         $this->app->alias(GeolocatorManager::class, 'geolocator');
         $this->app->alias(GeolocatorManager::class, Geolocator::class);
 
+        // The drivers resolve these on each lookup, so their lifetime is what gives a queue worker or
+        // an Octane process a replaced database without a restart. Keep them scoped: bind() would
+        // reopen the database on every lookup, and singleton() would pin it for the life of the
+        // process.
         $this->app->scoped(Drivers\IPLocationDB\Providers\AsnReaderProvider::class);
         $this->app->scoped(Drivers\IPLocationDB\Providers\CityReaderProvider::class);
         $this->app->scoped(Drivers\IPLocationDB\Providers\CountryReaderProvider::class);

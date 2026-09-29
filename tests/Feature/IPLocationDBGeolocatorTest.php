@@ -98,6 +98,43 @@ class IPLocationDBGeolocatorTest extends TestCase
     }
 
     /**
+     * Ensure the reader providers live for the scope rather than for the process: a lookup after the
+     * scope has been flushed must go through a new provider, and so open a new reader. That is what
+     * lets a queue worker or an Octane process pick up a replaced database without a restart.
+     */
+    public function test_a_flushed_scope_gives_the_next_lookup_a_new_reader_provider(): void
+    {
+        /** @var array<int, RecordingReaderProvider> $providers */
+        $providers = [];
+
+        $this->app->scoped(CountryReaderProvider::class, function () use (&$providers) {
+            $provider = new RecordingReaderProvider('country');
+
+            $providers[] = $provider;
+
+            return $provider;
+        });
+
+        $driver = $this->driverFor([
+            'ipv4' => 'storage/app/geolocation/country-ipv4.mmdb',
+        ]);
+
+        $driver->lookupCountry('8.8.8.8');
+        $driver->lookupCountry('9.9.9.9');
+
+        $this->assertCount(1, $providers, 'two lookups in one scope should share a provider');
+        $this->assertCount(1, $providers[0]->requestedPaths, 'and share the reader it opened');
+
+        // What the queue worker does between jobs, and Octane does between requests.
+        $this->app->forgetScopedInstances();
+
+        $driver->lookupCountry('1.1.1.1');
+
+        $this->assertCount(2, $providers, 'a flushed scope should build a new provider');
+        $this->assertCount(1, $providers[1]->requestedPaths, 'and open a reader of its own');
+    }
+
+    /**
      * Ensure the configured path is read for the edition and version that was asked for.
      */
     public function test_the_provider_resolves_the_path_for_the_ip_version(): void
