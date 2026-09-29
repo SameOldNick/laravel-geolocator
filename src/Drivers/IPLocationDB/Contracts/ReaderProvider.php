@@ -1,8 +1,6 @@
 <?php
 
-namespace SameOldNick\Geolocator\Contracts;
-
-use SameOldNick\Geolocator\Drivers\IPLocationDB\Reader;
+namespace SameOldNick\Geolocator\Drivers\IPLocationDB\Contracts;
 
 interface ReaderProvider
 {

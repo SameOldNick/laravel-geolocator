@@ -86,7 +86,7 @@ can send it, so hand-parsing trusts a spoofable value.
 
 @verbatim
     <code-snippet name="Faking a lookup" lang="php">
-        /** @var \SameOldNick\Geolocator\Drivers\FakeGeolocator $driver */
+        /** @var \SameOldNick\Geolocator\Drivers\Fake\FakeGeolocator $driver */
         $driver = Geolocator::fake();
 
         $driver->mock('8.8.8.8', new LocationResult(

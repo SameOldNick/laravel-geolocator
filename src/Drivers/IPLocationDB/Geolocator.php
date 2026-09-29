@@ -4,6 +4,7 @@ namespace SameOldNick\Geolocator\Drivers\IPLocationDB;
 
 use InvalidArgumentException;
 use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
+use SameOldNick\Geolocator\Drivers\IPLocationDB\Contracts\Reader as ReaderContract;
 use SameOldNick\Geolocator\DTOs\LocationResult;
 use SameOldNick\Geolocator\Support\IPAddressHelper;
 
@@ -17,8 +18,11 @@ class Geolocator implements GeolocatorContract
     /**
      * Create a new class instance.
      */
-    public function __construct()
-    {
+    public function __construct(
+        protected readonly Contracts\ReaderProvider $countryProvider,
+        protected readonly Contracts\ReaderProvider $cityProvider,
+        protected readonly Contracts\ReaderProvider $asnProvider,
+    ) {
         $this->mapper = new ResultMapper;
     }
 
@@ -86,17 +90,19 @@ class Geolocator implements GeolocatorContract
 
     /**
      * Get a reader instance for the given edition and IP address
+     *
+     * @param  string  $edition  The edition name (country, city, asn)
+     * @param  string  $ip  The IP address
+     * @return ReaderContract The reader instance
      */
-    protected function getReader(string $edition, string $ip): Reader
+    protected function getReader(string $edition, string $ip): ReaderContract
     {
-        $providerClass = match ($edition) {
-            'country' => Providers\CountryReaderProvider::class,
-            'city' => Providers\CityReaderProvider::class,
-            'asn' => Providers\AsnReaderProvider::class,
+        $provider = match ($edition) {
+            'country' => $this->countryProvider,
+            'city' => $this->cityProvider,
+            'asn' => $this->asnProvider,
             default => throw new InvalidArgumentException("Invalid edition: $edition"),
         };
-
-        $provider = app($providerClass);
 
         return $provider->getReader($this->isIpv6($ip) ? 6 : 4);
     }

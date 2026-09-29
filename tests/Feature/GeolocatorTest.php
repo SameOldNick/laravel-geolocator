@@ -4,13 +4,14 @@ namespace SameOldNick\Geolocator\Tests\Feature;
 
 use Illuminate\Http\Request;
 use InvalidArgumentException;
-use ReflectionProperty;
 use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
+use SameOldNick\Geolocator\Drivers\Fake\FakeReader;
 use SameOldNick\Geolocator\Drivers\IPLocationDB\Geolocator as IpLocationDbGeolocator;
 use SameOldNick\Geolocator\DTOs\LocationResult;
 use SameOldNick\Geolocator\Facades\Geolocator;
 use SameOldNick\Geolocator\GeolocatorManager;
 use SameOldNick\Geolocator\Tests\Fixtures\RecordingGeolocator;
+use SameOldNick\Geolocator\Tests\Fixtures\RecordingReaderProvider;
 use SameOldNick\Geolocator\Tests\TestCase;
 
 /**
@@ -130,20 +131,36 @@ class GeolocatorTest extends TestCase
     }
 
     /**
-     * Ensure the ip-location-db driver is created with the configured editions.
+     * Ensure the ip-location-db driver resolves its reader through the provider, and queries the
+     * instance the provider returns for the address's IP version.
      */
-    public function test_iplocationdb_driver_receives_editions_config(): void
+    public function test_iplocationdb_driver_gets_its_reader_from_the_provider(): void
     {
         $path = storage_path('app/geolocation/custom-country.mmdb');
-        config()->set('geolocator.drivers.iplocationdb.editions.country.ipv4', $path);
+        config()->set('geolocator.drivers.iplocationdb.editions.fake.ipv4', $path);
+
+        $reader = new FakeReader;
+        $provider = new RecordingReaderProvider(createReader: fn () => $reader);
+
+        Geolocator::extend('iplocationdb', function () use ($provider) {
+            return new IpLocationDbGeolocator(
+                $provider,
+                $provider,
+                $provider,
+            );
+        });
+
         Geolocator::forgetDrivers();
+
+        $reader->mock(self::PUBLIC_IP, ['country_code' => 'US']);
 
         $driver = Geolocator::driver('iplocationdb');
         $this->assertInstanceOf(IpLocationDbGeolocator::class, $driver);
 
-        $config = (new ReflectionProperty(IpLocationDbGeolocator::class, 'config'))->getValue($driver);
+        $result = $driver->lookupCountry(self::PUBLIC_IP);
 
-        $this->assertSame($path, $config['editions']['country']['ipv4']);
+        $this->assertSame([$path], $provider->requestedPaths);
+        $this->assertSame('US', $result->country?->countryCode);
     }
 
     /**

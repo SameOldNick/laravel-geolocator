@@ -154,7 +154,7 @@ use SameOldNick\Geolocator\DTOs\AsnResult;
 use SameOldNick\Geolocator\DTOs\LocationResult;
 use SameOldNick\Geolocator\Facades\Geolocator;
 
-/** @var \SameOldNick\Geolocator\Drivers\FakeGeolocator $driver */
+/** @var \SameOldNick\Geolocator\Drivers\Fake\FakeGeolocator $driver */
 $driver = Geolocator::fake();
 
 $driver->mock('8.8.8.8', new LocationResult(

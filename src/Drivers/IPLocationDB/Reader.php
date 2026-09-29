@@ -3,9 +3,10 @@
 namespace SameOldNick\Geolocator\Drivers\IPLocationDB;
 
 use MaxMind\Db\Reader as MaxMindReader;
+use SameOldNick\Geolocator\Drivers\IPLocationDB\Contracts\Reader as ReaderContract;
 use SameOldNick\Geolocator\Support\IPAddressHelper;
 
-class Reader
+class Reader implements ReaderContract
 {
     /**
      * MaxMind database reader instance

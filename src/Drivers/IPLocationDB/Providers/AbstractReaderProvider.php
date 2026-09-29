@@ -2,7 +2,8 @@
 
 namespace SameOldNick\Geolocator\Drivers\IPLocationDB\Providers;
 
-use SameOldNick\Geolocator\Contracts\ReaderProvider;
+use SameOldNick\Geolocator\Drivers\IPLocationDB\Contracts\Reader as ReaderContract;
+use SameOldNick\Geolocator\Drivers\IPLocationDB\Contracts\ReaderProvider;
 use SameOldNick\Geolocator\Drivers\IPLocationDB\Reader;
 
 abstract class AbstractReaderProvider implements ReaderProvider
@@ -10,7 +11,7 @@ abstract class AbstractReaderProvider implements ReaderProvider
     /**
      * The reader instance for this provider, if one has been created.
      */
-    protected ?Reader $reader = null;
+    protected ?ReaderContract $reader = null;
 
     /**
      * Get database path for edition and IP address
@@ -41,7 +42,7 @@ abstract class AbstractReaderProvider implements ReaderProvider
      * @param  int  $ipVersion  The IP version (4 or 6)
      * @return Reader The reader instance
      */
-    public function createReader(int $ipVersion): Reader
+    public function createReader(int $ipVersion): ReaderContract
     {
         $databasePath = $this->getDatabasePath($this->getEdition(), $ipVersion);
 
@@ -51,7 +52,7 @@ abstract class AbstractReaderProvider implements ReaderProvider
     /**
      * {@inheritDoc}
      */
-    public function getReader(int $ipVersion): Reader
+    public function getReader(int $ipVersion): ReaderContract
     {
         if ($this->reader === null) {
             $this->reader = $this->createReader($ipVersion);

@@ -1,11 +1,9 @@
 <?php
 
-namespace SameOldNick\Geolocator\Drivers;
+namespace SameOldNick\Geolocator\Drivers\Fake;
 
 use Closure;
 use Faker\Generator;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
 use Illuminate\Support\Testing\Fakes\Fake;
 use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
 use SameOldNick\Geolocator\DTOs\AsnResult;
@@ -24,6 +22,8 @@ use SameOldNick\Geolocator\Support\IPAddressHelper;
  */
 class FakeGeolocator implements Fake, GeolocatorContract
 {
+    use Concerns\MocksResults;
+
     /**
      * The faker
      */
@@ -36,9 +36,10 @@ class FakeGeolocator implements Fake, GeolocatorContract
      * @param  int  $chanceOfEmpty  Percentage chance of an empty result for an unpinned public address
      */
     public function __construct(
-        public array $mockedResults,
+        array $mockedResults,
         public readonly int $chanceOfEmpty,
     ) {
+        $this->mockedResults = $mockedResults;
         $this->faker = fake();
     }
 
@@ -54,9 +55,7 @@ class FakeGeolocator implements Fake, GeolocatorContract
      */
     public function mock(string $ip, LocationResult|Closure|null $result = null): self
     {
-        $this->mockedResults[$ip] = $result;
-
-        return $this;
+        return $this->setMock($ip, $result);
     }
 
     /**
@@ -65,7 +64,7 @@ class FakeGeolocator implements Fake, GeolocatorContract
     public function lookup(string $ip): LocationResult
     {
         if ($this->hasMockedResult($ip)) {
-            return $this->getMockedResult($ip, __FUNCTION__);
+            return $this->getMockedResult($ip, __FUNCTION__, fn ($ip) => $this->createEmptyResult($ip));
         }
 
         if ($this->shouldReturnEmpty() || $this->isPrivateIpAddress($ip)) {
@@ -86,7 +85,7 @@ class FakeGeolocator implements Fake, GeolocatorContract
     public function lookupCountry(string $ip): LocationResult
     {
         if ($this->hasMockedResult($ip)) {
-            return $this->getMockedResult($ip, __FUNCTION__);
+            return $this->getMockedResult($ip, __FUNCTION__, fn ($ip) => $this->createEmptyResult($ip));
         }
 
         if ($this->shouldReturnEmpty() || $this->isPrivateIpAddress($ip)) {
@@ -107,7 +106,7 @@ class FakeGeolocator implements Fake, GeolocatorContract
     public function lookupCity(string $ip): LocationResult
     {
         if ($this->hasMockedResult($ip)) {
-            return $this->getMockedResult($ip, __FUNCTION__);
+            return $this->getMockedResult($ip, __FUNCTION__, fn ($ip) => $this->createEmptyResult($ip));
         }
 
         if ($this->shouldReturnEmpty() || $this->isPrivateIpAddress($ip)) {
@@ -128,7 +127,7 @@ class FakeGeolocator implements Fake, GeolocatorContract
     public function lookupAsn(string $ip): LocationResult
     {
         if ($this->hasMockedResult($ip)) {
-            return $this->getMockedResult($ip, __FUNCTION__);
+            return $this->getMockedResult($ip, __FUNCTION__, fn ($ip) => $this->createEmptyResult($ip));
         }
 
         if ($this->shouldReturnEmpty() || $this->isPrivateIpAddress($ip)) {
@@ -141,42 +140,6 @@ class FakeGeolocator implements Fake, GeolocatorContract
             city: null,
             asn: $this->createAsnResult(),
         );
-    }
-
-    /**
-     * Find all mocked results matching the given IP address.
-     *
-     * @return array<string, LocationResult|Closure|null> Matched results, keyed by the pattern that matched
-     */
-    protected function findMockedResults(string $ip): array
-    {
-        return Arr::where($this->mockedResults, fn ($value, $key) => Str::is($key, $ip));
-    }
-
-    /**
-     * Determine if a mocked result exists for the given IP address.
-     */
-    protected function hasMockedResult(string $ip): bool
-    {
-        $found = $this->findMockedResults($ip);
-
-        return count($found) > 0;
-    }
-
-    /**
-     * Get the most specific mocked result for the given IP address, or an empty result if none is defined.
-     */
-    protected function getMockedResult(string $ip, string $method): LocationResult
-    {
-        $results = $this->findMockedResults($ip);
-
-        $sorted = Arr::sortDesc($results, fn ($value, $key) => match (true) {
-            $key === '*' => 1, // Wildcard
-            Str::contains($key, '*') => 2, // Glob pattern
-            default => 3, // Specific IP address
-        });
-
-        return value(array_shift($sorted), $ip, $method) ?? $this->createEmptyResult($ip);
     }
 
     /**
@@ -237,14 +200,6 @@ class FakeGeolocator implements Fake, GeolocatorContract
     protected function isPrivateIpAddress(string $ip): bool
     {
         return IPAddressHelper::isPrivateIPAddress($ip);
-    }
-
-    /**
-     * Get all mocked results
-     */
-    public function getMocks(): array
-    {
-        return $this->mockedResults;
     }
 
     /**

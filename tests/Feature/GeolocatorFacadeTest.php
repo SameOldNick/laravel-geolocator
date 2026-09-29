@@ -6,7 +6,7 @@ use Illuminate\Foundation\AliasLoader;
 use Illuminate\Support\Facades\Facade;
 use ReflectionMethod;
 use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
-use SameOldNick\Geolocator\Drivers\FakeGeolocator;
+use SameOldNick\Geolocator\Drivers\Fake\FakeGeolocator;
 use SameOldNick\Geolocator\DTOs\LocationResult;
 use SameOldNick\Geolocator\Facades\Geolocator;
 use SameOldNick\Geolocator\GeolocatorManager;

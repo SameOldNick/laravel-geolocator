@@ -5,7 +5,7 @@ namespace SameOldNick\Geolocator\Facades;
 use Closure;
 use Illuminate\Support\Facades\Facade;
 use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
-use SameOldNick\Geolocator\Drivers\FakeGeolocator;
+use SameOldNick\Geolocator\Drivers\Fake\FakeGeolocator;
 use SameOldNick\Geolocator\DTOs\LocationResult;
 
 /**

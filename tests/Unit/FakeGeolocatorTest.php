@@ -2,7 +2,7 @@
 
 namespace SameOldNick\Geolocator\Tests\Unit;
 
-use SameOldNick\Geolocator\Drivers\FakeGeolocator;
+use SameOldNick\Geolocator\Drivers\Fake\FakeGeolocator;
 use SameOldNick\Geolocator\DTOs\AsnResult;
 use SameOldNick\Geolocator\DTOs\CityResult;
 use SameOldNick\Geolocator\DTOs\CountryResult;

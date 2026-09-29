@@ -2,7 +2,7 @@
 
 namespace SameOldNick\Geolocator\Tests\Unit;
 
-use SameOldNick\Geolocator\Drivers\FakeGeolocator;
+use SameOldNick\Geolocator\Drivers\Fake\FakeGeolocator;
 use SameOldNick\Geolocator\Drivers\IPLocationDB\Geolocator as IpLocationGeolocator;
 use SameOldNick\Geolocator\DTOs\LocationResult;
 use SameOldNick\Geolocator\Facades\Geolocator;

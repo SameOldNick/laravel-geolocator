@@ -5,7 +5,7 @@ namespace SameOldNick\Geolocator\Tests\Feature;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use InvalidArgumentException;
-use SameOldNick\Geolocator\Drivers\FakeGeolocator;
+use SameOldNick\Geolocator\Drivers\Fake\FakeGeolocator;
 use SameOldNick\Geolocator\DTOs\AsnResult;
 use SameOldNick\Geolocator\DTOs\CityResult;
 use SameOldNick\Geolocator\DTOs\CountryResult;

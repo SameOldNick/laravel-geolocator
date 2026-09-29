@@ -24,7 +24,11 @@ class GeolocatorManager extends Manager implements Contracts\Geolocator
      */
     public function createIplocationdbDriver()
     {
-        return new IPLocationDB\Geolocator;
+        return new IPLocationDB\Geolocator(
+            $this->getContainer()->make(IPLocationDB\Providers\CountryReaderProvider::class),
+            $this->getContainer()->make(IPLocationDB\Providers\CityReaderProvider::class),
+            $this->getContainer()->make(IPLocationDB\Providers\AsnReaderProvider::class),
+        );
     }
 
     /**
