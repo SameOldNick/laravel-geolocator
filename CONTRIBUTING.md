@@ -1,7 +1,7 @@
 # Contributing
 
-This file is for working on the package. What a _consumer_ needs — installation, configuration and
-usage — is in [README.md](README.md), and it stays there.
+This file is for working on the package. What a _consumer_ needs is in [README.md](README.md) for the
+entry point, and the [wiki](https://github.com/SameOldNick/laravel-geolocator/wiki) for the detail.
 
 ## Requirements
 
@@ -36,7 +36,7 @@ The demo application lives in `workbench/`, and is wired up by `testbench.yaml`.
 
 | Command                                            | Purpose                            | Current state               |
 | -------------------------------------------------- | ---------------------------------- | --------------------------- |
-| `composer test`                                    | The Pest suite                     | Green — 97 tests, ~4s       |
+| `composer test`                                    | The Pest suite                     | Green — 133 tests, ~5s      |
 | `composer test-coverage`                           | The same, with coverage            | Green, needs Xdebug or PCOV |
 | `vendor/bin/pest tests/Feature/GeolocatorTest.php` | A single file                      | —                           |
 | `composer format`                                  | Pint, **rewriting** files in place | —                           |
@@ -84,8 +84,9 @@ the Codecov report rather than trusting the tick.
 - `tests/Feature/` covers the package through the container; `tests/Unit/` covers the DTOs, the
   helpers, the manager and the updater. Both directories are wired up in `phpunit.xml` by the
   `Test.php` suffix.
-- `tests/Fixtures/` holds the doubles: `RecordingGeolocator` records the calls a driver receives, and
-  `ScriptedUpdater` scripts the outcome of each download.
+- `tests/Fixtures/` holds the doubles: `RecordingGeolocator` records the calls a driver receives,
+  `RecordingReaderProvider` records the database paths a driver resolves through the provider and can
+  hand back a scripted reader, and `ScriptedUpdater` scripts the outcome of each download.
 - `phpunit.xml` runs the suite in random order with `failOnWarning`, `failOnRisky` and
   `beStrictAboutOutputDuringTests` enabled, so a test that depends on another, or that echoes
   something, fails the run.
@@ -94,13 +95,23 @@ the Codecov report rather than trusting the tick.
 
 ## Documentation
 
-- `README.md` is the consumer documentation and is what Packagist renders, so consumer-facing prose
-  belongs there.
-- `tests/Feature/ReadmeExamplesTest.php` executes the examples in the README. If you change documented
-  behaviour, update the README and that test together.
-- Keep consumer documentation in the repository rather than the GitHub wiki. A wiki is a separate
-  repository, so it is not versioned alongside a tag, is not exercised by CI, and Packagist cannot
-  render it — anything moved there stops being read.
+The consumer documentation is split in two: `README.md` is the short entry point that Packagist
+renders, and the [GitHub wiki](https://github.com/SameOldNick/laravel-geolocator/wiki) holds the
+detail, one Markdown file per page.
+
+- Keep `README.md` short — what the package is, requirements, installation and a quick start. Anything
+  a consumer has to see before installing belongs there.
+- The wiki is its own repository
+  (`git clone https://github.com/SameOldNick/laravel-geolocator.wiki.git`); edit the pages there and
+  push. Nothing under `docs/` is committed to this repository — it is local scratch (page drafts, issue
+  notes) and is git-ignored in full.
+- Link one page to another without the `.md` suffix so the link resolves on the wiki, and use an
+  absolute `https://github.com/SameOldNick/laravel-geolocator/wiki/...` link when pointing at a page
+  from `README.md`.
+- Wiki pages are **not** exercised by CI, and Packagist renders only the README. Any example that has to
+  stay true to the code belongs in `tests/Feature/ReadmeExamplesTest.php`, which re-implements the
+  documented examples rather than reading them. If you change documented behaviour, update the page and
+  that test together.
 - The Boost guideline at `resources/boost/guidelines/core.blade.php` is rendered as Blade by Boost,
   which silently skips a file that fails to render. Keep its snippets inside `@verbatim`, and render it
   by hand after editing.
@@ -114,7 +125,7 @@ Worth knowing before you assume something is covered:
 
 - No `.mmdb` fixture is committed, so the ip-location-db driver is only covered through its path
   selection and its failure mode. A licence-compatible edition is needed to go further.
-- Nothing asserts the README's reference tables or its manifest claims; they are maintained by hand.
+- Nothing asserts the reference tables in the README or the wiki pages; they are maintained by hand.
 - Neither the Boost guideline nor the Boost skill is covered by a test, so nothing checks that the
   skill's frontmatter parses or that its examples still match the code.
 

@@ -18,7 +18,9 @@ use SameOldNick\Geolocator\Tests\Fixtures\RecordingGeolocator;
 use SameOldNick\Geolocator\Tests\TestCase;
 
 /**
- * Runs the examples in README.md, so the documentation cannot drift away from the code.
+ * Runs the consumer examples that the README and the `docs/wiki/` pages document, so the
+ * documentation cannot drift away from the code. CI cannot read the wiki, so this file is where that
+ * guarantee lives — move it with the page it documents.
  *
  * Anything that needs a real MaxMind database is deliberately absent: the package ships no `.mmdb`
  * fixture, so lookups run through the fake or a recording driver. See issue 08 for that gap.
@@ -191,8 +193,9 @@ class ReadmeExamplesTest extends TestCase
         $response->assertJsonStructure(['ipAddress', 'country', 'city', 'asn']);
         $response->assertJsonPath('country.countryCode', 'US');
 
-        // The README documents the chain getClientIps() -> $request->ip() -> '0.0.0.0'. Laravel's
-        // test requests carry 127.0.0.1, so this lands on the second step of that chain.
+        // The README documents $request->ip(), with '0.0.0.0' as the fallback. Laravel's test requests
+        // carry 127.0.0.1, so that is the address handed to the driver — the macro no longer skips a
+        // private address in favour of a later entry in the client IP list.
         $this->assertSame('127.0.0.1', $recorder->calls[0]['ip']);
     }
 
