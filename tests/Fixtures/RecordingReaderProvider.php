@@ -26,6 +26,9 @@ class RecordingReaderProvider extends AbstractReaderProvider
         //
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function createReader(int $ipVersion): Reader
     {
         $path = $this->getDatabasePath($this->getEdition(), $ipVersion);
