@@ -8,6 +8,7 @@ use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
 use SameOldNick\Geolocator\Drivers\IPLocationDB\Providers\CountryReaderProvider;
 use SameOldNick\Geolocator\Drivers\IPLocationDB\Reader;
 use SameOldNick\Geolocator\Facades\Geolocator;
+use SameOldNick\Geolocator\Tests\Fixtures\RecordingReaderProvider;
 use SameOldNick\Geolocator\Tests\TestCase;
 
 /**
@@ -69,6 +70,31 @@ class IPLocationDBGeolocatorTest extends TestCase
         $driver->lookupCountry('2001:4860:4860::8888');
 
         $this->assertSame([4, 6], $provider->requestedVersions);
+    }
+
+    /**
+     * Ensure each lookup is served by the reader for its own IP version, even when the provider has
+     * already handed out a reader for the other version in the same scope. Unlike the test above,
+     * this leaves getReader() alone, so the provider's own reader cache is exercised.
+     */
+    public function test_each_address_uses_the_reader_for_its_own_ip_version(): void
+    {
+        $country = new RecordingReaderProvider('country');
+
+        $this->app->instance(CountryReaderProvider::class, $country);
+
+        $driver = $this->driverFor([
+            'ipv4' => 'storage/app/geolocation/country-ipv4.mmdb',
+            'ipv6' => 'storage/app/geolocation/country-ipv6.mmdb',
+        ]);
+
+        $driver->lookupCountry('8.8.8.8');
+        $driver->lookupCountry('2001:4860:4860::8888');
+
+        $this->assertSame([
+            'storage/app/geolocation/country-ipv4.mmdb',
+            'storage/app/geolocation/country-ipv6.mmdb',
+        ], $country->requestedPaths);
     }
 
     /**

@@ -9,9 +9,14 @@ use SameOldNick\Geolocator\Drivers\IPLocationDB\Reader;
 abstract class AbstractReaderProvider implements ReaderProvider
 {
     /**
-     * The reader instance for this provider, if one has been created.
+     * The reader instance for v4 addresses, if one has been created.
      */
-    protected ?ReaderContract $reader = null;
+    protected ?ReaderContract $readerv4 = null;
+
+    /**
+     * The reader instance for v6 addresses, if one has been created.
+     */
+    protected ?ReaderContract $readerv6 = null;
 
     /**
      * Get database path for edition and IP address
@@ -54,10 +59,34 @@ abstract class AbstractReaderProvider implements ReaderProvider
      */
     public function getReader(int $ipVersion): ReaderContract
     {
-        if ($this->reader === null) {
-            $this->reader = $this->createReader($ipVersion);
+        return $ipVersion === 6 ? $this->getReaderv6() : $this->getReaderv4();
+    }
+
+    /**
+     * Get the reader instance for IPv4 addresses
+     *
+     * @return ReaderContract The reader instance for IPv4 addresses
+     */
+    public function getReaderv4(): ReaderContract
+    {
+        if ($this->readerv4 === null) {
+            $this->readerv4 = $this->createReader(4);
         }
 
-        return $this->reader;
+        return $this->readerv4;
+    }
+
+    /**
+     * Get the reader instance for IPv6 addresses
+     *
+     * @return ReaderContract The reader instance for IPv6 addresses
+     */
+    public function getReaderv6(): ReaderContract
+    {
+        if ($this->readerv6 === null) {
+            $this->readerv6 = $this->createReader(6);
+        }
+
+        return $this->readerv6;
     }
 }

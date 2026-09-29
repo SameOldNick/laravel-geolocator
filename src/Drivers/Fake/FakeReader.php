@@ -14,6 +14,7 @@ class FakeReader implements Reader
      */
     public function __construct(
         public readonly string $databasePath = '',
+        public readonly int $ipVersion = 4,
     ) {
         //
     }

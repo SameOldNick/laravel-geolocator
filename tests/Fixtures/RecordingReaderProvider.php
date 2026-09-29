@@ -32,7 +32,7 @@ class RecordingReaderProvider extends AbstractReaderProvider
 
         $this->requestedPaths[] = $path;
 
-        return value($this->createReader, $path) ?? new FakeReader($path);
+        return value($this->createReader, $path, $ipVersion) ?? new FakeReader($path, $ipVersion);
     }
 
     /**
