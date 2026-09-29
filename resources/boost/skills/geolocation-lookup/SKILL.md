@@ -111,12 +111,18 @@ Route::get('/where-am-i', function (Illuminate\Http\Request $request) {
 $request->geolocate('127.0.0.1'); // fallback used when no address resolves
 ```
 
-It takes the first non-private address from `getClientIps()`, falls back to `$request->ip()`, then to
-`'0.0.0.0'`.
+It resolves the client address with `$request->ip()` and falls back to `'0.0.0.0'` when the request
+carries no address. The other two arguments are optional: the edition (`all`, `country`, `city` or
+`asn`, which selects the matching `lookup*()` method) and a driver name.
+
+```php
+$request->geolocate(edition: 'country'); // lookupCountry()
+$request->geolocate(driver: 'custom');   // a non-default driver
+```
 
 **Do not parse `X-Forwarded-For` or `X-Real-IP` by hand.** Any client can send those headers; they are
 only meaningful when the request passes through a trusted proxy configured with Laravel's
-`TrustProxies` middleware, which is exactly what `getClientIps()` already consults.
+`TrustProxies` middleware, which `$request->ip()` already consults.
 
 ## Failure modes
 

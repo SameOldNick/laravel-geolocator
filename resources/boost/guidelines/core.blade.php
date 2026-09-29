@@ -63,8 +63,9 @@ result, so run the update command before the first lookup or catch the exception
 ### Looking up the current request
 
 Use the `geolocate` macro on `Illuminate\Http\Request` rather than calling `lookup()` with
-`$request->ip()`. The macro takes the first non-private address from `getClientIps()`, falls back to
-`$request->ip()`, and finally to `'0.0.0.0'`.
+`$request->ip()`. The macro resolves the client address with `$request->ip()` and falls back to
+`'0.0.0.0'` when the request carries no address at all. Its two remaining arguments are optional: an
+edition (`all`, `country`, `city` or `asn`) and a driver name.
 
 @verbatim
     <code-snippet name="The geolocate request macro" lang="php">
@@ -73,6 +74,7 @@ Use the `geolocate` macro on `Illuminate\Http\Request` rather than calling `look
         });
 
         $request->geolocate('127.0.0.1'); // custom default
+        $request->geolocate(edition: 'country'); // one edition only
     </code-snippet>
 @endverbatim
 
