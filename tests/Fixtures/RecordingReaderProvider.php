@@ -20,10 +20,16 @@ class RecordingReaderProvider extends AbstractReaderProvider
      * Create a new recording reader provider.
      */
     public function __construct(
-        public readonly string $edition = 'fake',
+        string $edition = 'fake',
+        ?string $databasePathv4 = null,
+        ?string $databasePathv6 = null,
         public readonly Closure|Reader|null $createReader = null,
     ) {
-        //
+        parent::__construct(
+            $edition,
+            $databasePathv4 ?? config('geolocator.drivers.iplocationdb.editions.fake.ipv4'),
+            $databasePathv6 ?? config('geolocator.drivers.iplocationdb.editions.fake.ipv6'),
+        );
     }
 
     /**
@@ -31,18 +37,10 @@ class RecordingReaderProvider extends AbstractReaderProvider
      */
     public function createReader(int $ipVersion): Reader
     {
-        $path = $this->getDatabasePath($this->getEdition(), $ipVersion);
+        $path = $this->getDatabasePath($ipVersion);
 
         $this->requestedPaths[] = $path;
 
         return value($this->createReader, $path, $ipVersion) ?? new FakeReader($path, $ipVersion);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    protected function getEdition(): string
-    {
-        return $this->edition;
     }
 }

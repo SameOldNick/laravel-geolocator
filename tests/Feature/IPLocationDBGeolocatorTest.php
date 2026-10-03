@@ -46,7 +46,7 @@ class IPLocationDBGeolocatorTest extends TestCase
      */
     public function test_the_ip_version_selects_the_matching_database(): void
     {
-        $provider = new class extends CountryReaderProvider
+        $provider = new class('storage/app/geolocation/country-ipv4.mmdb', 'storage/app/geolocation/country-ipv6.mmdb') extends CountryReaderProvider
         {
             /** @var array<int, int> */
             public array $requestedVersions = [];
@@ -79,7 +79,11 @@ class IPLocationDBGeolocatorTest extends TestCase
      */
     public function test_each_address_uses_the_reader_for_its_own_ip_version(): void
     {
-        $country = new RecordingReaderProvider('country');
+        $country = new RecordingReaderProvider(
+            edition: 'country',
+            databasePathv4: 'storage/app/geolocation/country-ipv4.mmdb',
+            databasePathv6: 'storage/app/geolocation/country-ipv6.mmdb',
+        );
 
         $this->app->instance(CountryReaderProvider::class, $country);
 
@@ -108,7 +112,7 @@ class IPLocationDBGeolocatorTest extends TestCase
         $providers = [];
 
         $this->app->scoped(CountryReaderProvider::class, function () use (&$providers) {
-            $provider = new RecordingReaderProvider('country');
+            $provider = new RecordingReaderProvider(databasePathv4: 'storage/app/geolocation/country-ipv4.mmdb');
 
             $providers[] = $provider;
 
@@ -139,18 +143,11 @@ class IPLocationDBGeolocatorTest extends TestCase
      */
     public function test_the_provider_resolves_the_path_for_the_ip_version(): void
     {
-        config()->set('geolocator.drivers.iplocationdb.editions', [
-            'country' => [
-                'ipv4' => 'storage/app/geolocation/country-ipv4.mmdb',
-                'ipv6' => 'storage/app/geolocation/country-ipv6.mmdb',
-            ],
-        ]);
-
-        $provider = new class extends CountryReaderProvider
+        $provider = new class('storage/app/geolocation/country-ipv4.mmdb', 'storage/app/geolocation/country-ipv6.mmdb') extends CountryReaderProvider
         {
             public function pathFor(int $ipVersion): string
             {
-                return $this->getDatabasePath($this->getEdition(), $ipVersion);
+                return $this->getDatabasePath($ipVersion);
             }
         };
 

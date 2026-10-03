@@ -2,8 +2,10 @@
 
 namespace SameOldNick\Geolocator\Tests\Unit;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use ReflectionClass;
 use SameOldNick\Geolocator\Drivers\Fake\FakeReader;
+use SameOldNick\Geolocator\Drivers\IPLocationDB\Exceptions\MissingDatabaseConfiguration;
 use SameOldNick\Geolocator\Drivers\IPLocationDB\Providers\AsnReaderProvider;
 use SameOldNick\Geolocator\Drivers\IPLocationDB\Providers\CityReaderProvider;
 use SameOldNick\Geolocator\Drivers\IPLocationDB\Providers\CountryReaderProvider;
@@ -27,7 +29,7 @@ class ReaderProviderTest extends TestCase
 
         $reflection = new ReflectionClass($provider);
 
-        $databasePath = $reflection->getMethod('getDatabasePath')->invoke($provider, 'country', 4);
+        $databasePath = $reflection->getMethod('getDatabasePath')->invoke($provider, 4);
 
         $this->assertSame($path, $databasePath);
     }
@@ -60,6 +62,19 @@ class ReaderProviderTest extends TestCase
     }
 
     /**
+     * Ensure an exception is thrown for an invalid IP version.
+     */
+    #[DataProvider('ipVersions')]
+    public function test_create_reader_throws_an_exception_for_an_invalid_ip_version(int $ipVersion): void
+    {
+        $provider = new RecordingReaderProvider;
+
+        $this->expectException(MissingDatabaseConfiguration::class);
+
+        $provider->createReader($ipVersion);
+    }
+
+    /**
      * Ensure a reader is only created once and reused, so repeated lookups do not reopen the file.
      */
     public function test_get_reader_reuses_the_reader_created_for_the_same_ip_version(): void
@@ -85,7 +100,7 @@ class ReaderProviderTest extends TestCase
 
         $injected = new FakeReader('storage/app/geolocation/fake-ipv4.mmdb');
 
-        $provider = new RecordingReaderProvider('fake', $injected);
+        $provider = new RecordingReaderProvider(createReader: $injected);
 
         $this->assertSame($injected, $provider->getReader(4));
     }
@@ -104,27 +119,27 @@ class ReaderProviderTest extends TestCase
             'asn' => ['ipv4' => 'storage/app/geolocation/asn-ipv4.mmdb'],
         ]);
 
-        $country = new class extends CountryReaderProvider
+        $country = new class('storage/app/geolocation/country-ipv4.mmdb', 'storage/app/geolocation/country-ipv6.mmdb') extends CountryReaderProvider
         {
             public function pathFor(int $ipVersion): string
             {
-                return $this->getDatabasePath($this->getEdition(), $ipVersion);
+                return $this->getDatabasePath($ipVersion);
             }
         };
 
-        $city = new class extends CityReaderProvider
+        $city = new class('storage/app/geolocation/city-ipv4.mmdb', 'storage/app/geolocation/city-ipv6.mmdb') extends CityReaderProvider
         {
             public function pathFor(int $ipVersion): string
             {
-                return $this->getDatabasePath($this->getEdition(), $ipVersion);
+                return $this->getDatabasePath($ipVersion);
             }
         };
 
-        $asn = new class extends AsnReaderProvider
+        $asn = new class('storage/app/geolocation/asn-ipv4.mmdb', 'storage/app/geolocation/asn-ipv6.mmdb') extends AsnReaderProvider
         {
             public function pathFor(int $ipVersion): string
             {
-                return $this->getDatabasePath($this->getEdition(), $ipVersion);
+                return $this->getDatabasePath($ipVersion);
             }
         };
 
@@ -135,21 +150,15 @@ class ReaderProviderTest extends TestCase
     }
 
     /**
-     * Ensure a missing configuration key falls back to the given default.
+     * Provide IP versions for testing.
+     *
+     * @return array<string, array<int>>
      */
-    public function test_a_missing_configuration_key_falls_back_to_the_default(): void
+    public static function ipVersions(): array
     {
-        config()->set('geolocator.drivers.iplocationdb.editions.country.ipv4', 'storage/app/geolocation/country-ipv4.mmdb');
-
-        $provider = new class extends CountryReaderProvider
-        {
-            public function configFor(string $key, mixed $default = null): mixed
-            {
-                return $this->getConfig($key, $default);
-            }
-        };
-
-        $this->assertSame('storage/app/geolocation/country-ipv4.mmdb', $provider->configFor('editions.country.ipv4'));
-        $this->assertSame('fallback', $provider->configFor('editions.country.ipv7', 'fallback'));
+        return [
+            'ipv4' => [4],
+            'ipv6' => [6],
+        ];
     }
 }
