@@ -2,8 +2,8 @@
 
 namespace SameOldNick\Geolocator\DTOs;
 
-use SameOldNick\Geolocator\Support\CountryHelper;
 use Illuminate\Contracts\Support\Arrayable;
+use SameOldNick\Geolocator\Support\CountryHelper;
 
 class CountryResult implements Arrayable
 {
@@ -55,9 +55,10 @@ class CountryResult implements Arrayable
      * Creates CountryResult instance
      *
      * @param  string  $countryCode  ISO country code (e.g., "US")
+     * @param  string|null  $countryName  Full country name (e.g., "United States")
      * @return self|null Returns instance or null if $countryCode is invalid.
      */
-    public static function create(string $countryCode): ?self
+    public static function create(string $countryCode, ?string $countryName = null): ?self
     {
         $normalizedCode = CountryHelper::normalizeCountryCode($countryCode);
 
@@ -65,6 +66,9 @@ class CountryResult implements Arrayable
             return null;
         }
 
-        return new self(countryCode: $normalizedCode, countryName: CountryHelper::getCountryName($normalizedCode) ?? $normalizedCode);
+        return new self(
+            countryCode: $normalizedCode,
+            countryName: $countryName ?? CountryHelper::getCountryName($normalizedCode) ?? $normalizedCode,
+        );
     }
 }
