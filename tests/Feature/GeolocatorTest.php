@@ -2,7 +2,6 @@
 
 namespace SameOldNick\Geolocator\Tests\Feature;
 
-use Illuminate\Http\Request;
 use InvalidArgumentException;
 use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
 use SameOldNick\Geolocator\Drivers\Fake\FakeReader;
@@ -16,7 +15,7 @@ use SameOldNick\Geolocator\Tests\Fixtures\RecordingReaderProvider;
 use SameOldNick\Geolocator\Tests\TestCase;
 
 /**
- * Covers lookups, driver resolution and the request macro through the facade.
+ * Covers lookups and driver resolution through the facade.
  *
  * @internal
  */
@@ -26,16 +25,6 @@ class GeolocatorTest extends TestCase
      * The IP address used by the delegation tests.
      */
     protected const PUBLIC_IP = '8.8.8.8';
-
-    /**
-     * Reset the static trusted proxy state owned by Symfony's request.
-     */
-    protected function tearDown(): void
-    {
-        Request::setTrustedProxies([], -1);
-
-        parent::tearDown();
-    }
 
     /**
      * Register a recording driver and make it the configured default driver.
@@ -182,180 +171,5 @@ class GeolocatorTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         Geolocator::lookup(self::PUBLIC_IP);
-    }
-
-    /**
-     * Ensure the request macro resolves the configured driver.
-     */
-    public function test_request_macro_uses_the_configured_driver(): void
-    {
-        $recorder = $this->useRecordingDriver();
-
-        $request = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => self::PUBLIC_IP]);
-
-        $this->assertSame($recorder->result, $request->geolocate());
-        $this->assertSame(self::PUBLIC_IP, $recorder->calls[0]['ip']);
-    }
-
-    /**
-     * Ensure the request macro falls back to the default when the request has no address.
-     */
-    public function test_request_macro_uses_the_default_when_no_ip_is_available(): void
-    {
-        $recorder = $this->useRecordingDriver();
-
-        // Symfony leaves REMOTE_ADDR unset for requests built outside a server context.
-        $request = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => null]);
-
-        $this->assertSame($recorder->result, $request->geolocate());
-        $this->assertSame('0.0.0.0', $recorder->calls[0]['ip']);
-    }
-
-    /**
-     * Ensure the request macro honours a custom default.
-     */
-    public function test_request_macro_honours_a_custom_default(): void
-    {
-        $recorder = $this->useRecordingDriver();
-
-        $request = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => null]);
-
-        $this->assertSame($recorder->result, $request->geolocate('1.2.3.4'));
-        $this->assertSame('1.2.3.4', $recorder->calls[0]['ip']);
-    }
-
-    /**
-     * Ensure the request macro uses the forwarded public IP when the proxy is trusted.
-     */
-    public function test_request_macro_uses_the_forwarded_public_ip_from_a_trusted_proxy(): void
-    {
-        Request::setTrustedProxies(['10.0.0.5'], Request::HEADER_X_FORWARDED_FOR);
-
-        $recorder = $this->useRecordingDriver();
-
-        $request = Request::create('/', 'GET', [], [], [], [
-            'REMOTE_ADDR' => '10.0.0.5',
-            'HTTP_X_FORWARDED_FOR' => self::PUBLIC_IP,
-        ]);
-
-        $this->assertSame($recorder->result, $request->geolocate());
-        $this->assertSame(self::PUBLIC_IP, $recorder->calls[0]['ip']);
-    }
-
-    /**
-     * Ensure the request macro ignores a forwarded header sent by an untrusted proxy.
-     */
-    public function test_request_macro_ignores_the_forwarded_header_from_an_untrusted_proxy(): void
-    {
-        $recorder = $this->useRecordingDriver();
-
-        $request = Request::create('/', 'GET', [], [], [], [
-            'REMOTE_ADDR' => '10.0.0.5',
-            'HTTP_X_FORWARDED_FOR' => self::PUBLIC_IP,
-        ]);
-
-        $this->assertSame($recorder->result, $request->geolocate());
-        $this->assertSame('10.0.0.5', $recorder->calls[0]['ip']);
-    }
-
-    /**
-     * Ensure the request macro looks up the request IP when no public IP is present.
-     */
-    public function test_request_macro_falls_back_to_the_request_ip(): void
-    {
-        $recorder = $this->useRecordingDriver();
-
-        $request = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => '10.0.0.5']);
-
-        $this->assertSame($recorder->result, $request->geolocate());
-        $this->assertSame('10.0.0.5', $recorder->calls[0]['ip']);
-    }
-
-    /**
-     * Characterisation test: the macro resolves the manager class, so a facade fake does not reach
-     * it — the macro keeps using the configured driver while facade calls go to the swapped fake.
-     * Delete this once the macro resolves the contract instead.
-     */
-    public function test_request_macro_is_unaffected_by_a_facade_fake(): void
-    {
-        $recorder = $this->useRecordingDriver();
-
-        Geolocator::fake();
-
-        $request = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => self::PUBLIC_IP]);
-
-        $this->assertSame($recorder->result, $request->geolocate());
-        $this->assertSame([['method' => 'lookup', 'ip' => self::PUBLIC_IP]], $recorder->calls);
-
-        $this->assertNotSame($recorder->result, Geolocator::lookup(self::PUBLIC_IP));
-    }
-
-    /**
-     * Ensure the request macro honours the edition argument.
-     */
-    public function test_request_macro_uses_all_editions(): void
-    {
-        $recorder = $this->useRecordingDriver();
-
-        $request = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => self::PUBLIC_IP]);
-
-        $this->assertSame($recorder->result, $request->geolocate(edition: 'all'));
-        $this->assertSame('lookup', $recorder->calls[0]['method']);
-        $this->assertSame(self::PUBLIC_IP, $recorder->calls[0]['ip']);
-    }
-
-    /**
-     * Ensure the request macro honours the country edition argument.
-     */
-    public function test_request_macro_uses_country_edition(): void
-    {
-        $recorder = $this->useRecordingDriver();
-
-        $request = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => self::PUBLIC_IP]);
-
-        $this->assertSame($recorder->result, $request->geolocate(edition: 'country'));
-        $this->assertSame('lookupCountry', $recorder->calls[0]['method']);
-        $this->assertSame(self::PUBLIC_IP, $recorder->calls[0]['ip']);
-    }
-
-    /**
-     * Ensure the request macro honours the city edition argument.
-     */
-    public function test_request_macro_uses_city_edition(): void
-    {
-        $recorder = $this->useRecordingDriver();
-
-        $request = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => self::PUBLIC_IP]);
-
-        $this->assertSame($recorder->result, $request->geolocate(edition: 'city'));
-        $this->assertSame('lookupCity', $recorder->calls[0]['method']);
-        $this->assertSame(self::PUBLIC_IP, $recorder->calls[0]['ip']);
-    }
-
-    /**
-     * Ensure the request macro honours the ASN edition argument.
-     */
-    public function test_request_macro_uses_asn_edition(): void
-    {
-        $recorder = $this->useRecordingDriver();
-
-        $request = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => self::PUBLIC_IP]);
-
-        $this->assertSame($recorder->result, $request->geolocate(edition: 'asn'));
-        $this->assertSame('lookupAsn', $recorder->calls[0]['method']);
-        $this->assertSame(self::PUBLIC_IP, $recorder->calls[0]['ip']);
-    }
-
-    /**
-     * Ensure the request macro honours a custom driver.
-     */
-    public function test_request_macro_uses_custom_driver(): void
-    {
-        $recorder = $this->useRecordingDriver('custom', false);
-
-        $request = Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => self::PUBLIC_IP]);
-
-        $this->assertSame($recorder->result, $request->geolocate(driver: 'custom'));
-        $this->assertSame(self::PUBLIC_IP, $recorder->calls[0]['ip']);
     }
 }

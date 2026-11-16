@@ -181,6 +181,10 @@ class ReadmeExamplesTest extends TestCase
 
         Geolocator::extend('readme', fn () => $recorder);
         config()->set('geolocator.driver', 'readme');
+
+        // The macro goes through the IP client locator, which resolves its own driver name.
+        config()->set('geolocator.clients.ip.driver', 'readme');
+
         Geolocator::forgetDrivers();
 
         Route::get('/location', function (Request $request) {
