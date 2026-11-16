@@ -5,6 +5,7 @@ namespace SameOldNick\Geolocator\Tests\Feature;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use InvalidArgumentException;
+use SameOldNick\Geolocator\Contracts\ClientLocator as ClientLocatorContract;
 use SameOldNick\Geolocator\Drivers\Fake\FakeGeolocator;
 use SameOldNick\Geolocator\DTOs\AsnResult;
 use SameOldNick\Geolocator\DTOs\CityResult;
@@ -13,6 +14,7 @@ use SameOldNick\Geolocator\DTOs\LocationResult;
 use SameOldNick\Geolocator\Events\DatabaseFileUpdated;
 use SameOldNick\Geolocator\Events\DatabaseFileUpdateFailed;
 use SameOldNick\Geolocator\Events\DatabaseUpdatesCompleted;
+use SameOldNick\Geolocator\Facades\ClientLocator;
 use SameOldNick\Geolocator\Facades\Geolocator;
 use SameOldNick\Geolocator\Tests\Fixtures\RecordingGeolocator;
 use SameOldNick\Geolocator\Tests\TestCase;
@@ -234,6 +236,48 @@ class ReadmeExamplesTest extends TestCase
         $this->expectExceptionMessageMatches('/^Driver \[readme-driver\] not supported\.$/');
 
         Geolocator::lookup('8.8.8.8');
+    }
+
+    /**
+     * The "Faking the client locator" example.
+     */
+    public function test_the_client_locator_fake_example_returns_the_pinned_location(): void
+    {
+        ClientLocator::fake(new LocationResult(
+            ipAddress: '8.8.8.8',
+            country: CountryResult::create('US'),
+            city: null,
+            asn: null,
+        ));
+
+        $this->assertSame('US', ClientLocator::lookup()->country?->countryCode);
+        $this->assertNull(ClientLocator::lookupCountry()->city);
+        $this->assertSame('US', $this->app->make(ClientLocatorContract::class)->lookup()->country?->countryCode);
+    }
+
+    /**
+     * The "The headers client locator" example: headers the proxy injected become the result, with no
+     * database access.
+     */
+    public function test_the_headers_client_locator_example_uses_the_proxied_headers(): void
+    {
+        config()->set('geolocator.client', 'headers');
+        ClientLocator::forgetDrivers();
+
+        $request = Request::create('/', 'GET', [], [], [], [
+            'REMOTE_ADDR' => '8.8.8.8',
+            'HTTP_X_IP2LOCATION_COUNTRY_CODE' => 'US',
+            'HTTP_X_IP2LOCATION_COUNTRY_NAME' => 'United States',
+            'HTTP_X_IP2LOCATION_CITY' => 'Ashburn',
+        ]);
+
+        $this->app->instance('request', $request);
+
+        $location = $request->geolocate();
+
+        $this->assertSame('8.8.8.8', $location->ipAddress);
+        $this->assertSame('US', $location->country?->countryCode);
+        $this->assertSame('Ashburn', $location->city?->city);
     }
 
     /**
