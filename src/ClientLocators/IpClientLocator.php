@@ -32,10 +32,6 @@ readonly class IpClientLocator implements ClientLocatorContract
     {
         $ip = $this->getClientIpAddress();
 
-        if ($ip === null) {
-            throw new RuntimeException('Unable to determine client IP address.');
-        }
-
         return $this->driver()->lookup($ip);
     }
 
@@ -45,10 +41,6 @@ readonly class IpClientLocator implements ClientLocatorContract
     public function lookupCountry(): LocationResult
     {
         $ip = $this->getClientIpAddress();
-
-        if ($ip === null) {
-            throw new RuntimeException('Unable to determine client IP address.');
-        }
 
         return $this->driver()->lookupCountry($ip);
     }
@@ -60,10 +52,6 @@ readonly class IpClientLocator implements ClientLocatorContract
     {
         $ip = $this->getClientIpAddress();
 
-        if ($ip === null) {
-            throw new RuntimeException('Unable to determine client IP address.');
-        }
-
         return $this->driver()->lookupCity($ip);
     }
 
@@ -73,10 +61,6 @@ readonly class IpClientLocator implements ClientLocatorContract
     public function lookupAsn(): LocationResult
     {
         $ip = $this->getClientIpAddress();
-
-        if ($ip === null) {
-            throw new RuntimeException('Unable to determine client IP address.');
-        }
 
         return $this->driver()->lookupAsn($ip);
     }
@@ -95,6 +79,10 @@ readonly class IpClientLocator implements ClientLocatorContract
     protected function getClientIpAddress(): ?string
     {
         $ip = request()->ip();
+
+        if ($ip === null) {
+            throw new RuntimeException('Unable to determine client IP address.');
+        }
 
         return $ip;
     }
