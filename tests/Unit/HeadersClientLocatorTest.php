@@ -20,6 +20,9 @@ class HeadersClientLocatorTest extends TestCase
      */
     protected const PUBLIC_IP = '8.8.8.8';
 
+    /**
+     * Set up the test by setting the config options.
+     */
     protected function setUp(): void
     {
         parent::setUp();

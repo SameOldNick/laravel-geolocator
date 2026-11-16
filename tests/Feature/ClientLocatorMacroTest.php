@@ -25,6 +25,9 @@ class ClientLocatorMacroTest extends TestCase
      */
     protected const PUBLIC_IP = '8.8.8.8';
 
+    /**
+     * Set up by setting config values
+     */
     protected function setUp(): void
     {
         parent::setUp();
