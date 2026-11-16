@@ -36,7 +36,7 @@ The demo application lives in `workbench/`, and is wired up by `testbench.yaml`.
 
 | Command                                            | Purpose                            | Current state               |
 | -------------------------------------------------- | ---------------------------------- | --------------------------- |
-| `composer test`                                    | The Pest suite                     | Green — 133 tests, ~5s      |
+| `composer test`                                    | The Pest suite                     | Green — 209 tests, ~9s      |
 | `composer test-coverage`                           | The same, with coverage            | Green, needs Xdebug or PCOV |
 | `vendor/bin/pest tests/Feature/GeolocatorTest.php` | A single file                      | —                           |
 | `composer format`                                  | Pint, **rewriting** files in place | —                           |
@@ -63,17 +63,26 @@ lint` chains Pint and PHPStan, so it fails while either does.
 
 ## Continuous integration
 
-`.github/workflows/tests.yml` runs on every push and pull request to `main`, on PHP 8.4 with Xdebug:
+`.github/workflows/tests.yml` runs on every push and pull request to `main`, on PHP 8.4 with Xdebug, over
+a matrix of Laravel 11 (`orchestra/testbench` 9), Laravel 12 (10) and Laravel 13 (11):
 
 ```bash
-composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+composer require "laravel/framework:$LARAVEL" "orchestra/testbench:$TESTBENCH" --no-interaction --no-update
+composer update --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist --no-blocking
 composer build
 composer test -- --parallel --coverage-clover coverage.xml --log-junit junit.xml
 ```
 
+`--no-blocking` is there because Laravel 11 is past security support, so Composer refuses its stable
+releases; the matrix still installs and tests against it.
+
 Coverage and test results are both uploaded to Codecov. Note that the test step is
 `continue-on-error: true`, so a failing suite still shows a green workflow — read the job output or
 the Codecov report rather than trusting the tick.
+
+`.github/workflows/rafter-security.yml` runs the [Rafter](https://rafter.security) CLI
+(`rafter secrets . --quiet`) on the same pushes and pull requests, scanning the repository for
+committed secrets.
 
 ## Test layout
 
@@ -85,13 +94,18 @@ the Codecov report rather than trusting the tick.
   helpers, the manager and the updater. Both directories are wired up in `phpunit.xml` by the
   `Test.php` suffix.
 - `tests/Fixtures/` holds the doubles: `RecordingGeolocator` records the calls a driver receives,
-  `RecordingReaderProvider` records the database paths a driver resolves through the provider and can
-  hand back a scripted reader, and `ScriptedUpdater` scripts the outcome of each download.
+  `RecordingClientLocator` does the same for a client locator, `RecordingReaderProvider` records the
+  database paths a driver resolves through the provider and can hand back a scripted reader, and
+  `ScriptedUpdater` scripts the outcome of each download.
 - `phpunit.xml` runs the suite in random order with `failOnWarning`, `failOnRisky` and
   `beStrictAboutOutputDuringTests` enabled, so a test that depends on another, or that echoes
   something, fails the run.
 - When you swap `geolocator.driver` mid-test, call `Geolocator::forgetDrivers()` afterwards, or the
-  manager keeps handing back the driver it already resolved.
+  manager keeps handing back the driver it already resolved. The same applies to `geolocator.client` and
+  `ClientLocator::forgetDrivers()` when you swap a client locator.
+- The `geolocate` macro resolves the managers directly, so `Geolocator::fake()` and
+  `ClientLocator::fake()` do not intercept it: register a recording driver with `extend()` and point the
+  config at it when a test covers the macro.
 
 ## Documentation
 

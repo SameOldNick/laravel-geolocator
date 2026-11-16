@@ -51,9 +51,15 @@ Route::get('/where-am-i', function (Request $request) {
 });
 ```
 
-That is the whole integration. The service provider, the `geolocate` macro and the `Geolocator`
-facade alias are registered for you, there is no API key to configure, and a lookup is a file read
-rather than an HTTP call.
+That is the whole integration. The service provider, the `geolocate` macro and the `Geolocator` and
+`ClientLocator` facade aliases are registered for you, there is no API key to configure, and a lookup
+is a file read rather than an HTTP call. `$request->geolocate()` goes through a client locator, which
+decides how the caller is located: the default `ip` locator resolves `$request->ip()` and looks it up in
+the databases, while `GEOLOCATOR_CLIENT=headers` reads the answer from headers an upstream proxy
+injected — for example the
+[IP2Location Caddy Middleware](https://github.com/ip2location/ip2location-caddy), whose default header
+names this package matches. See
+[Client location](https://github.com/SameOldNick/laravel-geolocator/wiki/Client-Location).
 
 To look up an address other than the caller's, call the facade directly:
 
