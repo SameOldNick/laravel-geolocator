@@ -66,7 +66,8 @@ Use the `geolocate` macro on `Illuminate\Http\Request` rather than calling `look
 `$request->ip()`. It delegates to a **client locator**: `ip` (the default) resolves `$request->ip()` and
 looks it up through the geolocator driver named by `GEOLOCATOR_CLIENT_IP_DRIVER`, while
 `GEOLOCATOR_CLIENT=headers` reads the answer from headers an upstream proxy injected — the IP2Location
-Caddy module, a CDN, another reverse proxy — with no database access. Its two optional arguments are the
+Caddy Middleware (https://github.com/ip2location/ip2location-caddy), a CDN, another reverse proxy — with
+no database access. Its two optional arguments are the
 edition (`all`, `country`, `city` or `asn`) and the client locator; there is no default-address
 argument, so use `Geolocator::lookup($ip)` for a specific address.
 

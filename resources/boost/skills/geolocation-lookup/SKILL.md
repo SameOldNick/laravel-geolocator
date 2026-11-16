@@ -127,7 +127,9 @@ implementation:
   the geolocator driver named by `GEOLOCATOR_CLIENT_IP_DRIVER` (default `iplocationdb`, independent of
   `GEOLOCATOR_DRIVER`). With no request address it throws
   `RuntimeException: Unable to determine client IP address.`; use `Geolocator::lookup($ip)` there.
-- `headers` reads headers an upstream proxy injected, with no database access. A header name is
+- `headers` reads headers an upstream proxy injected, with no database access — for example the
+  IP2Location Caddy Middleware (https://github.com/ip2location/ip2location-caddy), whose default
+  `X-IP2Location-*` names this package matches. A header name is
   `prefix` + mapping, lowercased with `_` turned into `-`, so the defaults make `COUNTRY_CODE` the
   `X-IP2Location-Country-Code` header. Missing or malformed values leave an edition `null` (no
   exception), and the address falls back to `GEOLOCATOR_REQUEST_HEADERS_FALLBACK_IP`.
