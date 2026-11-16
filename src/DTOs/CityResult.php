@@ -2,8 +2,8 @@
 
 namespace SameOldNick\Geolocator\DTOs;
 
-use SameOldNick\Geolocator\Support\CountryHelper;
 use Illuminate\Contracts\Support\Arrayable;
+use SameOldNick\Geolocator\Support\CountryHelper;
 
 class CityResult implements Arrayable
 {
@@ -73,13 +73,15 @@ class CityResult implements Arrayable
      */
     public static function create(string $countryCode, ?string $city, ?string $state1, ?string $state2, ?float $latitude, ?float $longitude, ?string $timezone): ?self
     {
-        if (! CountryHelper::isCountryCodeValid($countryCode)) {
+        $normalizedCode = CountryHelper::normalizeCountryCode($countryCode);
+
+        if (! CountryHelper::isCountryCodeValid($normalizedCode)) {
             return null;
         }
 
         return new self(
-            countryCode: $countryCode,
-            countryName: CountryHelper::getCountryName($countryCode),
+            countryCode: $normalizedCode,
+            countryName: CountryHelper::getCountryName($normalizedCode) ?? $normalizedCode,
             city: $city,
             state1: $state1,
             state2: $state2,

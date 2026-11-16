@@ -62,14 +62,12 @@ class ResultDtosTest extends TestCase
     }
 
     /**
-     * Characterisation test: CityResult::create() validates the raw code, while
-     * CountryResult::create() normalises legacy codes first. A legacy code such as "UK"
-     * therefore yields a country but no city. Delete this once the two agree.
+     * Ensure a city result accepts legacy country codes that are accepted by the country result.
      */
-    public function test_city_result_rejects_legacy_codes_that_country_result_accepts(): void
+    public function test_city_result_accepts_legacy_codes_that_country_result_accepts(): void
     {
         $this->assertNotNull(CountryResult::create('UK'));
-        $this->assertNull(CityResult::create('UK', 'London', null, null, null, null, null));
+        $this->assertNotNull(CityResult::create('UK', 'London', null, null, null, null, null));
     }
 
     /**
