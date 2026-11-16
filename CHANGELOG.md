@@ -5,6 +5,34 @@ All notable changes are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-11-16
+
+> **This is a major release.** It contains breaking changes to the `geolocate` request macro and makes
+> the DTO, driver and client locator classes `readonly`. See [UPGRADING.md](UPGRADING.md) for the
+> migration.
+
+### Added
+
+- `Contracts\ClientLocator` and `ClientLocatorManager`, a singleton manager (also aliased as `client-locator` and as the contract) that locates the current client rather than an address you already have. It ships with two implementations: `ClientLocators\IpClientLocator`, which resolves `$request->ip()` and delegates to a geolocator driver, and `ClientLocators\Headers\HeadersClientLocator`, which builds the result from headers injected by an upstream proxy such as the [IP2Location Caddy Middleware](https://github.com/ip2location/ip2location-caddy).
+- `Facades\ClientLocator` with `fake()`, the global `ClientLocator` alias, and `ClientLocators\Fake\FakeClientLocator`, so a test can pin the client's location without a request or a database.
+- `ClientLocators\Headers\RequestHeaderMapper`, the header-name normalisation and per-edition mapping behind the headers client locator.
+- `geolocator.client` (`GEOLOCATOR_CLIENT`) and the `geolocator.clients.ip` and `geolocator.clients.headers` blocks, including the header prefix, the fallback address and the per-field header mappings.
+- `Drivers\IPLocationDB\Exceptions\MissingDatabaseConfiguration`, thrown when an edition's path is not configured at all instead of failing with an unrelated error.
+
+### Changed
+
+- **Breaking:** `Request::geolocate()` is now `geolocate($edition = 'all', $driver = null)`. The default-address argument is gone — the address comes from the configured client locator — and the second argument names a client locator (`ip`, `headers`, or a name registered with `ClientLocator::extend()`) rather than a geolocator driver.
+- The `geolocate` macro delegates to `ClientLocatorManager`, so client lookups resolve their geolocator driver from `geolocator.clients.ip.driver` rather than `geolocator.driver`.
+- `ClientLocatorManager` is a singleton like `GeolocatorManager`, so a client locator registered with `ClientLocator::extend()` during boot survives the scope flush that Octane and queue workers perform between requests and jobs.
+- The ip-location-db reader providers take their database paths through the constructor (`#[Config]` attributes on the shipped providers) instead of reading the config themselves, and `AbstractReaderProvider` no longer declares `getEdition()`.
+- `CountryResult::create()` accepts an optional country name, which the headers client locator uses when the proxy supplies one.
+- **Breaking:** the `LocationResult`, `CountryResult`, `CityResult` and `AsnResult` DTOs, the ip-location-db `Geolocator`, `Reader` and `ResultMapper`, and the `ClientLocators` implementations are now `readonly` classes. Their properties were already readonly, so reads are unchanged, but a subclass must also be `readonly` and Mockery can no longer mock the concrete classes.
+- The test workflow runs a Laravel 11, 12 and 13 matrix, and a Rafter secret scan runs on pushes and pull requests to `main`.
+
+### Fixed
+
+- `CityResult::create()` normalises legacy country codes before validating them, so a code such as `UK` now produces a city result with the normalised `GB` code and name instead of `null`, matching `CountryResult::create()`.
+
 ## [2.0.0] - 2026-09-29
 
 > **This is a major release.** It contains breaking changes to `Geolocator::fake()` and the

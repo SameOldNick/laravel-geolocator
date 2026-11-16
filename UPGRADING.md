@@ -4,6 +4,77 @@ This guide covers the consumer-visible changes between releases — what an appl
 when it moves to a new version. Installation, configuration and usage live in [README.md](README.md);
 working on the package itself is covered by [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## 2.x to 3.0
+
+### Required: `$request->geolocate()` has no default-address argument
+
+The macro is now `geolocate(?string $edition = 'all', ?string $driver = null)`. The first parameter used
+to be the default address, used only when the client IP could not be determined; it has been removed,
+and the edition is now the first parameter. If you relied on that default, resolve the address yourself
+— for example `Geolocator::lookup($request->ip() ?? '127.0.0.1')`, or the matching `lookupCountry()`,
+`lookupCity()` or `lookupAsn()` method.
+
+An old call that passed the address positionally now passes it as the edition instead, so an
+unrecognised value falls back to the full lookup of the caller's address. With the default `ip` client
+locator, a request with no address now throws `RuntimeException: Unable to determine client IP address.`
+Use `Geolocator::lookup($ip)` in console commands and queued jobs, or configure the `headers` client
+locator.
+
+The `driver:` argument also changed meaning: it now selects a client locator (`ip`, `headers`, or a name
+you register with `ClientLocator::extend()`), not a geolocator driver. To keep client lookups on a
+custom geolocator driver, register that driver as before and point `GEOLOCATOR_CLIENT_IP_DRIVER` (or
+`geolocator.clients.ip.driver`) at it.
+
+### Required if you extended a reader provider
+
+`AbstractReaderProvider` now takes `(string $edition, ?string $databasePathv4, ?string $databasePathv6)`
+in its constructor and reads the paths from those properties; `getEdition()` is gone and a subclass
+passes its edition to `parent::__construct()`. The shipped providers take their two paths through
+`#[Config]` attributes, which is the pattern to copy:
+
+```php
+public function __construct(
+    #[Config('geolocator.drivers.iplocationdb.editions.country.ipv4')]
+    ?string $databasePathv4,
+    #[Config('geolocator.drivers.iplocationdb.editions.country.ipv6')]
+    ?string $databasePathv6,
+) {
+    parent::__construct('country', $databasePathv4, $databasePathv6);
+}
+```
+
+A path that is configured as `null` now throws `Drivers\IPLocationDB\Exceptions\MissingDatabaseConfiguration`
+(`Missing database configuration for edition 'city' and IP version '6'.`) rather than failing deeper in
+the reader. Catch that type if you handle configuration errors yourself.
+
+### Required if you subclass or mock the immutable classes
+
+The `DTOs\LocationResult`, `DTOs\CountryResult`, `DTOs\CityResult` and `DTOs\AsnResult` classes, the
+ip-location-db `Geolocator`, `Reader` and `ResultMapper`, and the `ClientLocators` implementations are
+now `readonly` classes. Their properties were already readonly, so code that only reads them is
+unaffected. Two things can break:
+
+- A subclass must also be declared `readonly`; a non-readonly subclass is a fatal error.
+- Mockery cannot subclass a readonly class. To exercise a reader, bind a `Contracts\ReaderProvider` that
+  returns `Drivers\Fake\FakeReader` (or another `Contracts\Reader`) instead of mocking the concrete
+  reader; to fake a DTO, construct it.
+
+### No action: the client locator is new
+
+`Contracts\ClientLocator`, `ClientLocatorManager`, the `ClientLocator` facade and its global alias, and
+the `ip` and `headers` implementations are additions. Nothing existing changed behaviour: the macro still
+defaults to the caller's IP looked up through the geolocator driver — it is now reached through the `ip`
+client locator, configured by `geolocator.clients.ip.driver` (default `iplocationdb`).
+
+The two new config keys are merged from the package defaults even when your published
+`config/geolocator.php` predates them, so you only need to re-publish if you want to edit their values in
+place.
+
+`ClientLocatorManager` is a singleton, like `GeolocatorManager`, so a client locator registered with
+`ClientLocator::extend()` in a provider's `boot()` survives the scope flush that Octane and queue workers
+perform between requests and jobs. Its driver instances are cached for the life of the process, so read
+the request lazily inside the lookup methods rather than capturing it in the constructor.
+
 ## 1.x to 2.0
 
 The lookup API is unchanged: `lookup()`, `lookupCountry()`, `lookupCity()`, `lookupAsn()`, the
