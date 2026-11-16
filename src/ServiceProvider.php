@@ -97,16 +97,15 @@ class ServiceProvider extends BaseServiceProvider
             return; // respect an existing definition rather than clobbering it
         }
 
-        Request::macro('geolocate', function ($default = '0.0.0.0', $edition = 'all', $driver = null) {
-            $ip = $this->ip() ?? $default;
-
-            $geolocator = app(GeolocatorManager::class)->driver($driver);
+        Request::macro('geolocate', function ($edition = 'all', $driver = null) {
+            /** @var ClientLocator */
+            $clientLocator = app(ClientLocatorManager::class)->driver($driver);
 
             return match ($edition) {
-                'country' => $geolocator->lookupCountry($ip),
-                'city' => $geolocator->lookupCity($ip),
-                'asn' => $geolocator->lookupAsn($ip),
-                default => $geolocator->lookup($ip),
+                'country' => $clientLocator->lookupCountry(),
+                'city' => $clientLocator->lookupCity(),
+                'asn' => $clientLocator->lookupAsn(),
+                default => $clientLocator->lookup(),
             };
         });
     }
