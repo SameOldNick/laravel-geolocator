@@ -182,7 +182,8 @@ country code that is not in the package's bundled country list, and both normali
 argument for the displayed name, which is how the `headers` client locator keeps a name the proxy
 localised.
 `LocationResult::create()` and `AsnResult::create(int $asn, string $organization)` are the other factory
-methods, and `CountryResult::getCoordinates(): ?array` reads from the same country list.
+methods, and `CountryResult::getCoordinates(): ?array` reads from the same country list. The DTOs are
+`readonly`; build a new instance instead of mutating one.
 
 `Support\CountryHelper` exposes `getCountries()`, `getCountryCodes()`, `isCountryCodeValid()`,
 `getCountry()`, `getCountryName()`, `getCountryCoordinates()` and `normalizeCountryCode()`.
