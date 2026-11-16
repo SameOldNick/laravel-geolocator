@@ -177,10 +177,10 @@ Fix it by running `php artisan geolocator:update-iplocationdb`, or by pointing t
 ## Results and helpers
 
 `CountryResult::create()` and `CityResult::create()` are what the driver calls; both return `null` for a
-country code that is not in the package's bundled country list. `CountryResult::create()` takes an
-optional second argument for the displayed name, which is how the `headers` client locator keeps a name
-the proxy localised. `CountryResult::create()` normalises
-legacy codes first (`UK`→`GB`, `EL`→`GR`, `AN`→`CW`, `CS`→`RS`); `CityResult::create()` does not.
+country code that is not in the package's bundled country list, and both normalise legacy codes first
+(`UK`→`GB`, `EL`→`GR`, `AN`→`CW`, `CS`→`RS`). `CountryResult::create()` takes an optional second
+argument for the displayed name, which is how the `headers` client locator keeps a name the proxy
+localised.
 `LocationResult::create()` and `AsnResult::create(int $asn, string $organization)` are the other factory
 methods, and `CountryResult::getCoordinates(): ?array` reads from the same country list.
 
