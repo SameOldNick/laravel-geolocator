@@ -1,6 +1,6 @@
 ---
 name: geolocation-lookup
-description: Add and debug offline IP geolocation with the sameoldnick/laravel-geolocator package — install the MaxMind-format databases, look up country, city and ASN, resolve the current request's location, fake lookups in tests, and fix missing-database errors.
+description: Add and debug offline IP geolocation with the sameoldnick/laravel-geolocator package — install the MaxMind-format databases, look up country, city and ASN, locate the current request with the ClientLocator facade or proxy headers, fake lookups in tests, and fix missing-database errors.
 ---
 
 # Geolocation Lookup
@@ -13,8 +13,9 @@ read: no API key, no HTTP. Only `geolocator:update-iplocationdb` touches the net
 
 - Adding geolocation to a Laravel app, or resolving the current request's location.
 - Looking up the country, city or ASN behind an IP address.
+- Locating the caller through `ClientLocator`, or switching to headers a proxy injected.
 - Faking geolocation in tests.
-- Registering a custom driver.
+- Registering a custom driver or client locator.
 - Debugging a lookup that throws, or a database update that fails.
 
 ## Requirements
@@ -40,6 +41,11 @@ php artisan geolocator:update-iplocationdb           # required, downloads the d
 | `IPLOCATIONDB_ASN_DB_PATH` / `_V6`     | `storage/app/geolocation/GeoLite2-ASN[-IPv6].mmdb`     | ASN edition                                                  |
 | `MAXMIND_AUTO_UPDATE`                  | `true`                                                 | register the update command on the schedule                  |
 | `MAXMIND_UPDATE_FREQUENCY`             | `weekly`                                               | `hourly`, `daily`, `weekly`, `monthly`, or a cron expression |
+| `GEOLOCATOR_CLIENT`                    | `ip`                                                   | client locator behind the macro: `ip` or `headers`           |
+| `GEOLOCATOR_CLIENT_IP_DRIVER`          | `iplocationdb`                                         | geolocator driver the `ip` client locator uses               |
+| `GEOLOCATOR_REQUEST_HEADERS_PREFIX`    | `X_IP2LOCATION_`                                       | header prefix for the `headers` client locator               |
+| `GEOLOCATOR_REQUEST_HEADERS_FALLBACK_IP` | `0.0.0.0`                                            | address reported when the request carries none               |
+| `GEOLOCATOR_REQUEST_HEADER_*`          | `COUNTRY_CODE`, `CITY`, `REGION`, `TIME_ZONE`, `ASN`, … | header name for each mapped field                          |
 
 The `MAXMIND_*` names are deliberate even though the data comes from ip-location-db, not MaxMind.
 **Until the files exist, lookups throw** — see the Failure modes section below.
@@ -99,26 +105,50 @@ Geolocator::lookup('192.168.1.1')->hasResults(); // false
 (string) Geolocator::lookup('192.168.1.1');      // 'Unknown Location'
 ```
 
-## Resolving the current request
+## Resolving the current client
 
-The package registers a `geolocate` macro on `Illuminate\Http\Request`:
+`Geolocator::lookup($ip)` needs an address. The **client locator** locates the caller without one, and
+has its own facade, contract and scoped manager:
+
+```php
+use SameOldNick\Geolocator\Contracts\ClientLocator as ClientLocatorContract;
+use SameOldNick\Geolocator\Facades\ClientLocator;
+
+ClientLocator::lookup();        // all editions
+ClientLocator::lookupCountry(); // country only
+ClientLocator::lookupCity();
+ClientLocator::lookupAsn();
+```
+
+`app('client-locator')` and `\ClientLocator` resolve the same manager. `GEOLOCATOR_CLIENT` picks the
+implementation:
+
+- `ip` (the default) resolves `$request->ip()` — which already honours `TrustProxies` — and delegates to
+  the geolocator driver named by `GEOLOCATOR_CLIENT_IP_DRIVER` (default `iplocationdb`, independent of
+  `GEOLOCATOR_DRIVER`). With no request address it throws
+  `RuntimeException: Unable to determine client IP address.`; use `Geolocator::lookup($ip)` there.
+- `headers` reads headers an upstream proxy injected, with no database access. A header name is
+  `prefix` + mapping, lowercased with `_` turned into `-`, so the defaults make `COUNTRY_CODE` the
+  `X-IP2Location-Country-Code` header. Missing or malformed values leave an edition `null` (no
+  exception), and the address falls back to `GEOLOCATOR_REQUEST_HEADERS_FALLBACK_IP`.
+  **Only trust these headers from a proxy that strips client-supplied copies.**
+
+## The `geolocate` macro
+
+The package registers a `geolocate` macro on `Illuminate\Http\Request` that delegates to the configured
+client locator:
 
 ```php
 Route::get('/where-am-i', function (Illuminate\Http\Request $request) {
     return $request->geolocate()->toArray();
 });
 
-$request->geolocate('127.0.0.1'); // fallback used when no address resolves
+$request->geolocate('country');         // edition: all (default), country, city or asn
+$request->geolocate(driver: 'headers'); // a specific client locator
 ```
 
-It resolves the client address with `$request->ip()` and falls back to `'0.0.0.0'` when the request
-carries no address. The other two arguments are optional: the edition (`all`, `country`, `city` or
-`asn`, which selects the matching `lookup*()` method) and a driver name.
-
-```php
-$request->geolocate(edition: 'country'); // lookupCountry()
-$request->geolocate(driver: 'custom');   // a non-default driver
-```
+An unrecognised edition falls back to the full lookup. There is **no default-address argument** — the
+first argument is the edition — so use `Geolocator::lookup($ip)` for a specific address.
 
 **Do not parse `X-Forwarded-For` or `X-Real-IP` by hand.** Any client can send those headers; they are
 only meaningful when the request passes through a trusted proxy configured with Laravel's
@@ -126,13 +156,15 @@ only meaningful when the request passes through a trusted proxy configured with 
 
 ## Failure modes
 
-Three things throw. Everything else returns an empty result.
+These throw. Everything else returns an empty result.
 
 | Situation                                | What happens                                                                                                                                                                                 |
 | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A database file is missing or unreadable | `\InvalidArgumentException` (missing) or `MaxMind\Db\Reader\InvalidDatabaseException` (corrupt file, or a directory) from the first `lookup*()` call                                         |
 | Only some editions are installed         | `lookup()` opens the **country, city and ASN** readers, so a missing city or ASN file throws even when you only read the country. Use the edition-specific methods, or install all editions. |
 | An IPv6 address on an IPv4-only install  | IPv6 resolves through `editions.<edition>.ipv6` (`IPLOCATIONDB_*_PATH_V6`), which is missing or unset                                                                                        |
+| An edition path is configured as `null`  | `Drivers\IPLocationDB\Exceptions\MissingDatabaseConfiguration`: `Missing database configuration for edition 'city' and IP version '6'.`                                                       |
+| The request has no client address        | the `ip` client locator throws `RuntimeException: Unable to determine client IP address.`; the `headers` locator falls back to `GEOLOCATOR_REQUEST_HEADERS_FALLBACK_IP` instead                 |
 
 The exception is raised while `MaxMind\Db\Reader` is constructed, **before** the private/malformed
 address filter — so on a fresh install even `Geolocator::lookup('192.168.1.1')` throws.
@@ -143,7 +175,9 @@ Fix it by running `php artisan geolocator:update-iplocationdb`, or by pointing t
 ## Results and helpers
 
 `CountryResult::create()` and `CityResult::create()` are what the driver calls; both return `null` for a
-country code that is not in the package's bundled country list. `CountryResult::create()` normalises
+country code that is not in the package's bundled country list. `CountryResult::create()` takes an
+optional second argument for the displayed name, which is how the `headers` client locator keeps a name
+the proxy localised. `CountryResult::create()` normalises
 legacy codes first (`UK`→`GB`, `EL`→`GR`, `AN`→`CW`, `CS`→`RS`); `CityResult::create()` does not.
 `LocationResult::create()` and `AsnResult::create(int $asn, string $organization)` are the other factory
 methods, and `CountryResult::getCoordinates(): ?array` reads from the same country list.
@@ -197,7 +231,29 @@ addresses.
 To hand the facade back to the configured driver mid-test, or after changing `geolocator.driver`, use
 `Geolocator::swap(app(GeolocatorManager::class))` and `Geolocator::forgetDrivers()`.
 
-## Custom drivers
+`ClientLocator::fake($result)` does the same for the client locator: `lookup()` returns the pinned
+result, the edition methods return it with the other editions cleared, and no argument means an empty
+result for `0.0.0.0`.
+
+```php
+use SameOldNick\Geolocator\Facades\ClientLocator;
+
+ClientLocator::fake(new LocationResult(
+    ipAddress: '8.8.8.8',
+    country: CountryResult::create('US'),
+    city: null,
+    asn: null,
+));
+
+ClientLocator::lookup()->country?->countryCode; // 'US'
+```
+
+It rebinds the contract only — the `geolocate` macro resolves the manager directly, so it keeps using
+the configured locator. To cover the macro, register a recording geolocator driver and point
+`GEOLOCATOR_CLIENT_IP_DRIVER` (or `geolocator.clients.ip.driver`) at it. To exercise the `headers`
+locator, set `GEOLOCATOR_CLIENT=headers` and send the headers; no database is involved.
+
+## Custom drivers and client locators
 
 ```php
 Geolocator::extend('my-driver', fn ($app) => new MyGeolocator());
@@ -207,6 +263,13 @@ Implement `SameOldNick\Geolocator\Contracts\Geolocator`, then select it with `GE
 or `geolocator.driver` in the config. A name resolves through a registered creator or a
 `createXDriver()` method on the manager — a container binding alone is **not** consulted, and an
 unresolvable name throws `InvalidArgumentException`.
+
+Client lookups are a separate axis: they resolve their geolocator driver from
+`GEOLOCATOR_CLIENT_IP_DRIVER` (default `iplocationdb`), not from `GEOLOCATOR_DRIVER`. To replace the
+client locator itself, implement `SameOldNick\Geolocator\Contracts\ClientLocator` (no address argument)
+and register it with `ClientLocator::extend('mine', fn ($app) => new MineClientLocator())`, then select
+it with `GEOLOCATOR_CLIENT=mine` or `$request->geolocate(driver: 'mine')`. The manager is scoped, so read
+the request lazily inside the lookup methods rather than capturing it in the constructor.
 
 ## Keeping the databases up to date
 
@@ -261,6 +324,11 @@ $location = Cache::remember("geo:{$ip}", 3600, fn () => Geolocator::lookup($ip)-
 | Symptom                                                           | Cause                                                                                          | Fix                                                                                             |
 | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | `InvalidArgumentException` naming a `.mmdb` file                  | the databases were never downloaded                                                            | `php artisan geolocator:update-iplocationdb`, or set `IPLOCATIONDB_*_PATH`                      |
+| `MissingDatabaseConfiguration`                                    | the edition's path is `null` in the config                                                     | set `IPLOCATIONDB_*_PATH` / `_PATH_V6`, or re-publish the config                                |
+| `RuntimeException: Unable to determine client IP address.`        | `$request->geolocate()` ran with no request address (console command, queued job)              | use `Geolocator::lookup($ip)`, or call it from a request                                        |
+| Header lookups always return an empty result                      | the proxy is not sending the headers, or the prefix and mapping do not match its header names  | check `GEOLOCATOR_REQUEST_HEADERS_PREFIX` and `GEOLOCATOR_REQUEST_HEADER_*`; the default header is `X-IP2Location-Country-Code` |
+| `$request->geolocate('127.0.0.1')` no longer uses that address    | the first argument is the edition; there is no default-address argument                        | use `Geolocator::lookup('127.0.0.1')`                                                           |
+| A fake is not used by `$request->geolocate()`                     | the macro resolves the manager directly, so `Geolocator::fake()` and `ClientLocator::fake()` do not reach it | register the driver the macro should call and point `GEOLOCATOR_CLIENT_IP_DRIVER` at it |
 | IPv6 addresses throw while IPv4 works                             | the `-IPv6` editions are not configured                                                        | set `IPLOCATIONDB_*_PATH_V6`, or install them                                                   |
 | `$location->country` is `null` but `$location->city` is populated | the country edition has no record for the address; each DTO is built from its own edition only | fall back to `$location->city->countryCode`, or call `lookupCountry()`                          |
 | `Driver [x] is not supported.`                                    | no creator is registered for that name                                                         | `Geolocator::extend('x', ...)` or a `createXDriver()` method; a container binding is not enough |

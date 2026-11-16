@@ -63,9 +63,12 @@ result, so run the update command before the first lookup or catch the exception
 ### Looking up the current request
 
 Use the `geolocate` macro on `Illuminate\Http\Request` rather than calling `lookup()` with
-`$request->ip()`. The macro resolves the client address with `$request->ip()` and falls back to
-`'0.0.0.0'` when the request carries no address at all. Its two remaining arguments are optional: an
-edition (`all`, `country`, `city` or `asn`) and a driver name.
+`$request->ip()`. It delegates to a **client locator**: `ip` (the default) resolves `$request->ip()` and
+looks it up through the geolocator driver named by `GEOLOCATOR_CLIENT_IP_DRIVER`, while
+`GEOLOCATOR_CLIENT=headers` reads the answer from headers an upstream proxy injected — the IP2Location
+Caddy module, a CDN, another reverse proxy — with no database access. Its two optional arguments are the
+edition (`all`, `country`, `city` or `asn`) and the client locator; there is no default-address
+argument, so use `Geolocator::lookup($ip)` for a specific address.
 
 @verbatim
     <code-snippet name="The geolocate request macro" lang="php">
@@ -73,10 +76,15 @@ edition (`all`, `country`, `city` or `asn`) and a driver name.
         return $request->geolocate()->toArray();
         });
 
-        $request->geolocate('127.0.0.1'); // custom default
-        $request->geolocate(edition: 'country'); // one edition only
+        $request->geolocate('country'); // one edition only
+        $request->geolocate(driver: 'headers'); // a specific client locator
     </code-snippet>
 @endverbatim
+
+The `headers` locator builds a header name from `prefix` + the configured mapping and normalises it to
+lowercase with `_` replaced by `-`: the defaults make `X_IP2LOCATION_` + `COUNTRY_CODE` the
+`X-IP2Location-Country-Code` header. Only trust those headers when the proxy strips any client-supplied
+copies.
 
 `X-Forwarded-For` is only consulted for requests that arrive through a trusted proxy, configured with
 Laravel's `TrustProxies` middleware. Do not parse that header by hand to work around this: any client
@@ -109,6 +117,11 @@ them.
 
 `chanceOfEmpty` (default `0`) is the percentage chance of an empty result for an unmocked public
 address, and is passed by name: `Geolocator::fake(chanceOfEmpty: 100)`.
+
+`ClientLocator::fake(new LocationResult(...))` does the same for the client locator: it pins what
+`ClientLocator::lookup()` and the edition methods return. It rebinds the contract only, so the
+`geolocate` macro — which resolves the manager directly — keeps using the configured locator; point
+`GEOLOCATOR_CLIENT_IP_DRIVER` at a recording driver when you cover the macro.
 
 ### Custom drivers
 
