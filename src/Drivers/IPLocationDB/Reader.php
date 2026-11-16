@@ -6,17 +6,17 @@ use MaxMind\Db\Reader as MaxMindReader;
 use SameOldNick\Geolocator\Drivers\IPLocationDB\Contracts\Reader as ReaderContract;
 use SameOldNick\Geolocator\Support\IPAddressHelper;
 
-class Reader implements ReaderContract
+readonly class Reader implements ReaderContract
 {
     /**
      * MaxMind database reader instance
      */
-    protected readonly MaxMindReader $reader;
+    protected MaxMindReader $reader;
 
     /**
      * Constructor
      */
-    public function __construct(public readonly string $databasePath)
+    public function __construct(public string $databasePath)
     {
         $this->reader = new MaxMindReader($databasePath);
     }

@@ -8,12 +8,12 @@ use SameOldNick\Geolocator\Drivers\IPLocationDB\Contracts\Reader as ReaderContra
 use SameOldNick\Geolocator\DTOs\LocationResult;
 use SameOldNick\Geolocator\Support\IPAddressHelper;
 
-class Geolocator implements GeolocatorContract
+readonly class Geolocator implements GeolocatorContract
 {
     /**
      * The result mapper
      */
-    protected readonly ResultMapper $mapper;
+    protected ResultMapper $mapper;
 
     /**
      * Create a new class instance.

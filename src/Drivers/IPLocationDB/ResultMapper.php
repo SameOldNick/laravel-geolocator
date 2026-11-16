@@ -7,7 +7,7 @@ use SameOldNick\Geolocator\DTOs\CityResult;
 use SameOldNick\Geolocator\DTOs\CountryResult;
 use SameOldNick\Geolocator\DTOs\LocationResult;
 
-class ResultMapper
+readonly class ResultMapper
 {
     /**
      * Map raw database records to LocationResult DTO

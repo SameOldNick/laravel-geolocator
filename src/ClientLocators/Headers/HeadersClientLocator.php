@@ -7,7 +7,7 @@ use Illuminate\Support\Arr;
 use SameOldNick\Geolocator\Contracts\ClientLocator as ClientLocatorContract;
 use SameOldNick\Geolocator\DTOs\LocationResult;
 
-class HeadersClientLocator implements ClientLocatorContract
+readonly class HeadersClientLocator implements ClientLocatorContract
 {
     public const UPPER = '_ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
@@ -16,7 +16,7 @@ class HeadersClientLocator implements ClientLocatorContract
     /**
      * The request header mapper instance.
      */
-    protected readonly RequestHeaderMapper $requestHeaderMapper;
+    protected RequestHeaderMapper $requestHeaderMapper;
 
     /**
      * Create a new HeadersClientLocator instance.
@@ -28,15 +28,15 @@ class HeadersClientLocator implements ClientLocatorContract
      */
     public function __construct(
         #[Config('geolocator.clients.headers.prefix')]
-        protected readonly ?string $requestHeaderPrefix,
+        protected ?string $requestHeaderPrefix,
         #[Config('geolocator.clients.headers.mappings.country', default: [])]
-        protected readonly array $countryRequestHeaders,
+        protected array $countryRequestHeaders,
         #[Config('geolocator.clients.headers.mappings.city', default: [])]
-        protected readonly array $cityRequestHeaders,
+        protected array $cityRequestHeaders,
         #[Config('geolocator.clients.headers.mappings.asn', default: [])]
-        protected readonly array $asnRequestHeaders,
+        protected array $asnRequestHeaders,
         #[Config('geolocator.clients.headers.fallback_ip', default: '0.0.0.0')]
-        protected readonly string $fallbackIp,
+        protected string $fallbackIp,
     ) {
         $this->requestHeaderMapper = new RequestHeaderMapper(
             $this->prepareHeaders($this->countryRequestHeaders),

@@ -5,7 +5,7 @@ namespace SameOldNick\Geolocator\DTOs;
 use Illuminate\Contracts\Support\Arrayable;
 use SameOldNick\Geolocator\Support\CountryHelper;
 
-class CountryResult implements Arrayable
+readonly class CountryResult implements Arrayable
 {
     /**
      * Constructor
@@ -14,8 +14,8 @@ class CountryResult implements Arrayable
      * @param  string  $countryName  Full country name (e.g., "United States")
      */
     public function __construct(
-        public readonly string $countryCode,
-        public readonly string $countryName,
+        public string $countryCode,
+        public string $countryName,
     ) {
         //
     }

@@ -4,7 +4,7 @@ namespace SameOldNick\Geolocator\DTOs;
 
 use Illuminate\Contracts\Support\Arrayable;
 
-class LocationResult implements Arrayable
+readonly class LocationResult implements Arrayable
 {
     /**
      * Constructor
@@ -14,11 +14,13 @@ class LocationResult implements Arrayable
      * @param  AsnResult|null  $asn  ASN information
      */
     public function __construct(
-        public readonly string $ipAddress,
-        public readonly ?CountryResult $country,
-        public readonly ?CityResult $city,
-        public readonly ?AsnResult $asn,
-    ) {}
+        public string $ipAddress,
+        public ?CountryResult $country,
+        public ?CityResult $city,
+        public ?AsnResult $asn,
+    ) {
+        //
+    }
 
     /**
      * Check if any results are available

@@ -12,14 +12,14 @@ use SameOldNick\Geolocator\DTOs\LocationResult;
  * A single-edition lookup returns the pinned result with the other editions cleared, matching what
  * the real client locators return.
  */
-class FakeClientLocator implements ClientLocatorContract, Fake
+readonly class FakeClientLocator implements ClientLocatorContract, Fake
 {
     /**
      * Create a new class instance.
      *
      * @param  LocationResult  $result  The result every lookup is answered with
      */
-    public function __construct(public readonly LocationResult $result)
+    public function __construct(public LocationResult $result)
     {
         //
     }

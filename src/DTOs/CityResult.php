@@ -5,7 +5,7 @@ namespace SameOldNick\Geolocator\DTOs;
 use Illuminate\Contracts\Support\Arrayable;
 use SameOldNick\Geolocator\Support\CountryHelper;
 
-class CityResult implements Arrayable
+readonly class CityResult implements Arrayable
 {
     /**
      * Constructor
@@ -20,14 +20,14 @@ class CityResult implements Arrayable
      * @param  string|null  $timezone  Timezone identifier (e.g., "America/New_York")
      */
     public function __construct(
-        public readonly string $countryCode,
-        public readonly string $countryName,
-        public readonly ?string $city,
-        public readonly ?string $state1,
-        public readonly ?string $state2,
-        public readonly ?float $latitude,
-        public readonly ?float $longitude,
-        public readonly ?string $timezone,
+        public string $countryCode,
+        public string $countryName,
+        public ?string $city,
+        public ?string $state1,
+        public ?string $state2,
+        public ?float $latitude,
+        public ?float $longitude,
+        public ?string $timezone,
     ) {
         //
     }

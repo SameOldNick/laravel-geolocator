@@ -11,14 +11,6 @@ use SameOldNick\Geolocator\Events\DatabaseUpdatesCompleted;
 class Updater
 {
     /**
-     * Constructor
-     */
-    public function __construct()
-    {
-        //
-    }
-
-    /**
      * Update the IP location databases
      *
      * @param  callable|null  $callback  Optional callback for progress reporting

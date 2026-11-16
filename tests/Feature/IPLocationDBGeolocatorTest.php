@@ -3,10 +3,10 @@
 namespace SameOldNick\Geolocator\Tests\Feature;
 
 use InvalidArgumentException;
-use Mockery;
 use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
+use SameOldNick\Geolocator\Drivers\Fake\FakeReader;
+use SameOldNick\Geolocator\Drivers\IPLocationDB\Contracts\Reader as ReaderContract;
 use SameOldNick\Geolocator\Drivers\IPLocationDB\Providers\CountryReaderProvider;
-use SameOldNick\Geolocator\Drivers\IPLocationDB\Reader;
 use SameOldNick\Geolocator\Facades\Geolocator;
 use SameOldNick\Geolocator\Tests\Fixtures\RecordingReaderProvider;
 use SameOldNick\Geolocator\Tests\TestCase;
@@ -51,11 +51,11 @@ class IPLocationDBGeolocatorTest extends TestCase
             /** @var array<int, int> */
             public array $requestedVersions = [];
 
-            public function getReader(int $ipVersion): Reader
+            public function getReader(int $ipVersion): ReaderContract
             {
                 $this->requestedVersions[] = $ipVersion;
 
-                return Mockery::mock(Reader::class)->shouldIgnoreMissing();
+                return new FakeReader(ipVersion: $ipVersion);
             }
         };
 

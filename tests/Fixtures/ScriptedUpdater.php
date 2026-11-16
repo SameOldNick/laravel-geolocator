@@ -27,8 +27,6 @@ class ScriptedUpdater extends Updater
      */
     public function __construct(array $outcomes)
     {
-        parent::__construct();
-
         $this->outcomes = $outcomes;
     }
 

@@ -4,7 +4,7 @@ namespace SameOldNick\Geolocator\DTOs;
 
 use Illuminate\Contracts\Support\Arrayable;
 
-class AsnResult implements Arrayable
+readonly class AsnResult implements Arrayable
 {
     /**
      * Constructor
@@ -13,9 +13,11 @@ class AsnResult implements Arrayable
      * @param  string  $organization  Autonomous System Organization
      */
     public function __construct(
-        public readonly int $asn,
-        public readonly string $organization,
-    ) {}
+        public int $asn,
+        public string $organization,
+    ) {
+        //
+    }
 
     /**
      * {@inheritDoc}

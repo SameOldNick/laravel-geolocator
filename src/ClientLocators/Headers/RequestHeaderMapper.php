@@ -8,7 +8,7 @@ use SameOldNick\Geolocator\DTOs\CityResult;
 use SameOldNick\Geolocator\DTOs\CountryResult;
 use SameOldNick\Geolocator\DTOs\LocationResult;
 
-class RequestHeaderMapper
+readonly class RequestHeaderMapper
 {
     /**
      * Create a new RequestHeaderMapper instance.
@@ -18,9 +18,9 @@ class RequestHeaderMapper
      * @param  array  $asnHeaderMappings  Mapping of ASN header keys to their corresponding request header names
      */
     public function __construct(
-        protected readonly array $countryHeaderMappings,
-        protected readonly array $cityHeaderMappings,
-        protected readonly array $asnHeaderMappings,
+        protected array $countryHeaderMappings,
+        protected array $cityHeaderMappings,
+        protected array $asnHeaderMappings,
     ) {
         //
     }

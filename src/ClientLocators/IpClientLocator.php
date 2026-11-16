@@ -9,7 +9,7 @@ use SameOldNick\Geolocator\Contracts\Geolocator as GeolocatorContract;
 use SameOldNick\Geolocator\DTOs\LocationResult;
 use SameOldNick\Geolocator\GeolocatorManager;
 
-class IpClientLocator implements ClientLocatorContract
+readonly class IpClientLocator implements ClientLocatorContract
 {
     /**
      * Create a new IpClientLocator instance.
@@ -18,9 +18,9 @@ class IpClientLocator implements ClientLocatorContract
      * @param  string|null  $driver  Optional driver name to use for lookup
      */
     public function __construct(
-        protected readonly GeolocatorManager $driverManager,
+        protected GeolocatorManager $driverManager,
         #[Config('geolocator.clients.ip.driver')]
-        protected readonly ?string $driver,
+        protected ?string $driver,
     ) {
         //
     }
