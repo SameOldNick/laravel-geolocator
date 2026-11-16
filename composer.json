@@ -86,7 +86,8 @@
         "SameOldNick\\Geolocator\\ServiceProvider"
       ],
       "aliases": {
-        "Geolocator": "SameOldNick\\Geolocator\\Facades\\Geolocator"
+        "Geolocator": "SameOldNick\\Geolocator\\Facades\\Geolocator",
+        "ClientLocator": "SameOldNick\\Geolocator\\Facades\\ClientLocator"
       }
     }
   },
