@@ -5,6 +5,7 @@ namespace SameOldNick\Geolocator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
+use SameOldNick\Geolocator\Contracts\ClientLocator;
 use SameOldNick\Geolocator\Contracts\Geolocator;
 
 class ServiceProvider extends BaseServiceProvider
@@ -22,6 +23,13 @@ class ServiceProvider extends BaseServiceProvider
 
         $this->app->alias(GeolocatorManager::class, 'geolocator');
         $this->app->alias(GeolocatorManager::class, Geolocator::class);
+
+        $this->app->scoped(ClientLocatorManager::class, function ($app) {
+            return new ClientLocatorManager($app);
+        });
+
+        $this->app->alias(ClientLocatorManager::class, 'client-locator');
+        $this->app->alias(ClientLocatorManager::class, ClientLocator::class);
 
         // The drivers resolve these on each lookup, so their lifetime is what gives a queue worker or
         // an Octane process a replaced database without a restart. Keep them scoped: bind() would

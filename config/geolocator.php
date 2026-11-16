@@ -62,4 +62,41 @@ return [
             ],
         ],
     ],
+
+    'client' => env('GEOLOCATOR_CLIENT', 'ip'), // 'ip' or 'headers'
+
+    'clients' => [
+        'ip' => [
+            'driver' => env('GEOLOCATOR_CLIENT_IP_DRIVER', 'iplocationdb'),
+        ],
+
+        'headers' => [
+            'prefix' => env('GEOLOCATOR_REQUEST_HEADERS_PREFIX', 'X_IP2LOCATION_'),
+
+            'fallback_ip' => env('GEOLOCATOR_REQUEST_HEADERS_FALLBACK_IP', '0.0.0.0'),
+
+            'mappings' => [
+                'country' => [
+                    'country_code' => env('GEOLOCATOR_REQUEST_HEADER_COUNTRY_CODE', 'COUNTRY_CODE'),
+                    'country_name' => env('GEOLOCATOR_REQUEST_HEADER_COUNTRY_NAME', 'COUNTRY_NAME'),
+                ],
+
+                'city' => [
+                    'country_code' => env('GEOLOCATOR_REQUEST_HEADER_COUNTRY_CODE', 'COUNTRY_CODE'),
+                    'country_name' => env('GEOLOCATOR_REQUEST_HEADER_COUNTRY_NAME', 'COUNTRY_NAME'),
+                    'city' => env('GEOLOCATOR_REQUEST_HEADER_CITY', 'CITY'),
+                    'state1' => env('GEOLOCATOR_REQUEST_HEADER_STATE1', 'REGION'),
+                    'state2' => env('GEOLOCATOR_REQUEST_HEADER_STATE2', 'STATE2'),
+                    'latitude' => env('GEOLOCATOR_REQUEST_HEADER_LATITUDE', 'LATITUDE'),
+                    'longitude' => env('GEOLOCATOR_REQUEST_HEADER_LONGITUDE', 'LONGITUDE'),
+                    'timezone' => env('GEOLOCATOR_REQUEST_HEADER_TIMEZONE', 'TIME_ZONE'),
+                ],
+
+                'asn' => [
+                    'asn' => env('GEOLOCATOR_REQUEST_HEADER_ASN', 'ASN'),
+                    'organization' => env('GEOLOCATOR_REQUEST_HEADER_ORGANIZATION', 'AS'),
+                ],
+            ],
+        ],
+    ],
 ];
