@@ -27,7 +27,7 @@ class ClientLocatorManagerTest extends TestCase
     }
 
     /**
-     * Ensure the container, the string alias and the contract resolve the same scoped manager.
+     * Ensure the container, the string alias and the contract resolve the same manager.
      */
     public function test_the_container_aliases_resolve_the_same_manager(): void
     {
@@ -133,17 +133,21 @@ class ClientLocatorManagerTest extends TestCase
     }
 
     /**
-     * Ensure the manager is scoped: one instance per request, a fresh one afterwards.
+     * Ensure the manager outlives the request scope, so a client locator registered during boot
+     * survives the flush that Octane and queue workers perform between requests and jobs.
      */
-    public function test_the_manager_is_scoped_to_the_request_lifecycle(): void
+    public function test_extended_client_locators_survive_a_flushed_scope(): void
     {
-        $first = $this->app->make(ClientLocatorManager::class);
+        $manager = $this->manager();
+        $result = $this->cannedResult();
 
-        $this->assertSame($first, $this->app->make(ClientLocatorManager::class));
+        $manager->extend('surviving', fn () => new RecordingClientLocator($result));
 
+        // What Octane and the queue worker do between requests and jobs.
         $this->app->forgetScopedInstances();
 
-        $this->assertNotSame($first, $this->app->make(ClientLocatorManager::class));
+        $this->assertSame($manager, $this->manager());
+        $this->assertSame($result, $this->manager()->driver('surviving')->lookup());
     }
 
     /**
@@ -193,7 +197,7 @@ class ClientLocatorManagerTest extends TestCase
     }
 
     /**
-     * Resolve the scoped manager under test.
+     * Resolve the manager under test.
      */
     protected function manager(): ClientLocatorManager
     {

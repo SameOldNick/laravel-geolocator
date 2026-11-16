@@ -36,11 +36,18 @@ class ClientLocatorFacadeTest extends TestCase
     }
 
     /**
-     * Ensure the facade resolves the same scoped manager as the container.
+     * Ensure the facade resolves the same manager as the container, including after a scope flush.
      */
-    public function test_facade_resolves_the_scoped_manager(): void
+    public function test_facade_resolves_the_manager_singleton(): void
     {
-        $this->assertSame($this->app->make(ClientLocatorManager::class), ClientLocator::getFacadeRoot());
+        $manager = $this->app->make(ClientLocatorManager::class);
+
+        $this->assertSame($manager, ClientLocator::getFacadeRoot());
+
+        $this->app->forgetScopedInstances();
+
+        $this->assertSame($manager, $this->app->make(ClientLocatorManager::class));
+        $this->assertSame($manager, ClientLocator::getFacadeRoot());
     }
 
     /**

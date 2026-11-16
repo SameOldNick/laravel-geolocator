@@ -17,6 +17,10 @@ class ServiceProvider extends BaseServiceProvider
      */
     public function register()
     {
+        // Both managers are singletons: they cache drivers and the custom creators registered with
+        // extend() during boot, and scoping them would discard those creators between requests or jobs.
+        // Their drivers must therefore be stateless and read the request lazily; request-bound state
+        // belongs in a scoped collaborator such as the reader providers below.
         $this->app->singleton(GeolocatorManager::class, function ($app) {
             return new GeolocatorManager($app);
         });
@@ -24,7 +28,7 @@ class ServiceProvider extends BaseServiceProvider
         $this->app->alias(GeolocatorManager::class, 'geolocator');
         $this->app->alias(GeolocatorManager::class, Geolocator::class);
 
-        $this->app->scoped(ClientLocatorManager::class, function ($app) {
+        $this->app->singleton(ClientLocatorManager::class, function ($app) {
             return new ClientLocatorManager($app);
         });
 

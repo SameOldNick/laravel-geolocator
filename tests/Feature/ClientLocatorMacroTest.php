@@ -380,7 +380,7 @@ class ClientLocatorMacroTest extends TestCase
     }
 
     /**
-     * Resolve the scoped client locator manager the macro uses.
+     * Resolve the client locator manager the macro uses.
      */
     protected function manager(): ClientLocatorManager
     {

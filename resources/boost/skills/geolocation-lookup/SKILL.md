@@ -108,7 +108,7 @@ Geolocator::lookup('192.168.1.1')->hasResults(); // false
 ## Resolving the current client
 
 `Geolocator::lookup($ip)` needs an address. The **client locator** locates the caller without one, and
-has its own facade, contract and scoped manager:
+has its own facade, contract and manager:
 
 ```php
 use SameOldNick\Geolocator\Contracts\ClientLocator as ClientLocatorContract;
@@ -270,8 +270,9 @@ Client lookups are a separate axis: they resolve their geolocator driver from
 `GEOLOCATOR_CLIENT_IP_DRIVER` (default `iplocationdb`), not from `GEOLOCATOR_DRIVER`. To replace the
 client locator itself, implement `SameOldNick\Geolocator\Contracts\ClientLocator` (no address argument)
 and register it with `ClientLocator::extend('mine', fn ($app) => new MineClientLocator())`, then select
-it with `GEOLOCATOR_CLIENT=mine` or `$request->geolocate(driver: 'mine')`. The manager is scoped, so read
-the request lazily inside the lookup methods rather than capturing it in the constructor.
+it with `GEOLOCATOR_CLIENT=mine` or `$request->geolocate(driver: 'mine')`. The manager is a singleton
+and caches its driver instances, so read the request lazily inside the lookup methods rather than
+capturing it in the constructor.
 
 ## Keeping the databases up to date
 
